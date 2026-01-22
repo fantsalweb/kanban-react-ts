@@ -142,9 +142,21 @@ export default function KanbanColumnNote({
     setScrollableModal2(!scrollableModal2);
   };
 
-  // 📝 Entrar en modo edición con toda la nota
+  // 📝 Entrar en modo edición con toda la nota (sanitizando propiedades)
   const handleEditClick = (note: any) => {
-    setEditNote({ ...note });
+    const sanitizedNote = {
+      ...note,
+      title: note.title || "",
+      description: note.description || "",
+      checklist: Array.isArray(note.checklist) ? note.checklist : [],
+      members: Array.isArray(note.members) ? note.members : [],
+      tags: Array.isArray(note.tags) ? note.tags : [],
+      priority: note.priority || "low",
+      dates: note.dates || { createdAt: "", deadline: "" },
+      comments: Array.isArray(note.comments) ? note.comments : [],
+      files: Array.isArray(note.files) ? note.files : [],
+    };
+    setEditNote(sanitizedNote);
   };
 
   // ✏️ Actualizar dinámicamente cualquier campo de la nota
@@ -372,8 +384,20 @@ export default function KanbanColumnNote({
     }
   };
 
-  const checks = note.checklist.length;
-  let checkFinish = note.checklist.filter(
+  // Sanitize note data to prevent undefined errors
+  const sanitizedNote = {
+    ...note,
+    checklist: Array.isArray(note?.checklist) ? note.checklist : [],
+    members: Array.isArray(note?.members) ? note.members : [],
+    tags: Array.isArray(note?.tags) ? note.tags : [],
+    comments: Array.isArray(note?.comments) ? note.comments : [],
+    files: Array.isArray(note?.files) ? note.files : [],
+    dates: note?.dates || { createdAt: "", deadline: "" },
+    priority: note?.priority || "low",
+  };
+
+  const checks = sanitizedNote.checklist.length;
+  let checkFinish = sanitizedNote.checklist.filter(
     (check: any) => check.finished === true
   );
   checkFinish = checkFinish.length;
@@ -382,28 +406,34 @@ export default function KanbanColumnNote({
   };
 
   const formatedDate = (formatDate: any) => {
+    // Si no hay fecha o está vacía, devolver "-"
+    if (!formatDate) return "-";
+    
     const date = new Date(formatDate);
+    
+    // Validar si es una fecha válida
+    if (isNaN(date.getTime())) return "-";
+    
     const formatter = new Intl.DateTimeFormat("en-US", {
       month: "short",
       day: "numeric",
     });
-    const formattedDate = formatter.format(date);
-    return formattedDate;
+    return formatter.format(date);
   };
   let priority = "low";
   let colorPriority = "green";
-  if (note.priority === "high") {
+  if (sanitizedNote.priority === "high") {
     priority = "high";
     colorPriority = "red";
-  } else if (note.priority === "medium") {
+  } else if (sanitizedNote.priority === "medium") {
     priority = "medium";
     colorPriority = "orange";
   }
-  const priorityClass = `priority ${note.priority.toLowerCase()}`;
-  const completedCount = note.checklist.filter(
+  const priorityClass = `priority ${sanitizedNote.priority.toLowerCase()}`;
+  const completedCount = sanitizedNote.checklist.filter(
     (check: any) => check.finished
   ).length;
-  const totalCount = note.checklist.length;
+  const totalCount = sanitizedNote.checklist.length;
   const completionPercentage =
     totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
   const viewNote = false;
@@ -411,11 +441,11 @@ export default function KanbanColumnNote({
     <>
       <article className="task">
         <div>
-          <img src={note.image} alt={note.title} style={{ maxWidth: "100%" }} />
+          <img src={sanitizedNote.image} alt={sanitizedNote.title} style={{ maxWidth: "100%" }} />
         </div>
         <div>
-          <strong className={colorPriority} title={note.priority}>
-            {note.title}
+          <strong className={colorPriority} title={sanitizedNote.priority}>
+            {sanitizedNote.title}
           </strong>
           <MDBDropdown>
             <MDBDropdownToggle color="tertiary">...</MDBDropdownToggle>
@@ -430,46 +460,46 @@ export default function KanbanColumnNote({
                 link
                 onClick={() => {
                   setScrollableModal1(!scrollableModal1);
-                  handleEditClick(note);
+                  handleEditClick(sanitizedNote);
                 }}
               >
                 EDIT
               </MDBDropdownItem>
-              <MDBDropdownItem link onClick={() => handleDeleteNote(note.id)}>
+              <MDBDropdownItem link onClick={() => handleDeleteNote(sanitizedNote.id)}>
                 DELETE
               </MDBDropdownItem>
             </MDBDropdownMenu>
           </MDBDropdown>
         </div>
         <ul>
-          {note.tags.map((tag: string, i: number) => (
+          {sanitizedNote.tags.map((tag: string, i: number) => (
             <MDBBadge pill light key={i}>
               {tag}
             </MDBBadge>
           ))}
         </ul>
-        <p>{note.description}</p>
+        <p>{sanitizedNote.description}</p>
         <div className="task-icons">
           <div style={{ fontSize: "10px" }}>
             <span>
               <i className="material-icons">checklist</i>
-              {checkFinish}/ {note.checklist.length}
+              {checkFinish}/ {sanitizedNote.checklist.length}
             </span>
             <span>
               <i className="material-icons">attach_file</i>
-              {note.files.length}
+              {sanitizedNote.files.length}
             </span>
             <span>
               <i className="material-icons">comment</i>
-              {note.comments.length}
+              {sanitizedNote.comments.length}
             </span>
             <span>
               <i className="material-icons">event</i>
-              {formatedDate(note.dates.deadline)}
+              {formatedDate(sanitizedNote.dates.deadline)}
             </span>
           </div>
           <div className="task-members">
-            {note.members.map((member: { user_id: string }) => {
+            {sanitizedNote.members.map((member: { user_id: string }) => {
               const user = usersClient.find(
                 (user: any) => user.user_id === member.user_id
               );
@@ -488,7 +518,7 @@ export default function KanbanColumnNote({
       </article>
       {/* VIEW TAG */}
       <ModalView
-        note={note}
+        note={sanitizedNote}
         scrollableModal={scrollableModal}
         setScrollableModal={setScrollableModal}
         usersClient={usersClient}

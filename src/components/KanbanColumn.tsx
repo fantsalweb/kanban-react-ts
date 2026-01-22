@@ -70,17 +70,17 @@ export default function KanbanColumn({
     const newNote = {
       id: (column.notes.length + 1).toString(),
       img: "https://mdbootstrap.com/img/new/standard/city/017.webp",
-      title: noteValue.title,
-      description: noteValue.description,
-      checklist: noteValue.checklist,
+      title: noteValue.title || "",
+      description: noteValue.description || "",
+      checklist: noteValue.checklist || [],
       members: noteValue.members || [],
-      tags: noteValue.tags,
-      priority: noteValue.priority,
+      tags: noteValue.tags || [],
+      priority: noteValue.priority || "low",
       dates: {
         createdAt: Date.now().toString(),
-        deadline: noteValue.dates.deadline,
+        deadline: noteValue.dates?.deadline || "",
       },
-      comments: noteValue.comments,
+      comments: noteValue.comments || [],
       files: [],
     };
 

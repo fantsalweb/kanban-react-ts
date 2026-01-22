@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   MDBBtn,
   MDBBadge,
@@ -54,6 +54,13 @@ export default function ModalEdit({
   handleSaveNote
 }: any) {
   const [scrollableModal3, setScrollableModal3] = useState(false);
+  // Estado local para el modal - evita guardar cambios hasta que el usuario haga click en "Save changes"
+  const [localEditNote, setLocalEditNote] = useState(editNote);
+
+  // Sincronizar el estado local cuando editNote cambia (cuando se abre el modal)
+  useEffect(() => {
+    setLocalEditNote(editNote);
+  }, [editNote, scrollableModal1]);
   return (
     <>
       <MDBModal
@@ -78,16 +85,18 @@ export default function ModalEdit({
                   <strong>IMAGE</strong>
                 </div>
                 <img
-                  src={editNote.image}
-                  alt={editNote.title}
+                  src={localEditNote.image}
+                  alt={localEditNote.title}
                   style={{ maxWidth: "100%", marginBottom: "1em" }}
                 />
                 <MDBInput
                   name="image"
                   label="Image..."
                   type="text"
-                  value={editNote.image}
-                  onChange={(e) => handleChange("image", e.target.value)}
+                  value={localEditNote.image}
+                  onChange={(e) => {
+                    setLocalEditNote({...localEditNote, image: e.target.value});
+                  }}
                 />
               </div>
               <div className="labelForm">
@@ -99,8 +108,10 @@ export default function ModalEdit({
                   name="title"
                   label="Title..."
                   type="text"
-                  value={editNote.title}
-                  onChange={(e) => handleChange("title", e.target.value)}
+                  value={localEditNote.title}
+                  onChange={(e) => {
+                    setLocalEditNote({...localEditNote, title: e.target.value});
+                  }}
                 />
               </div>
               <div className="labelForm">
@@ -109,14 +120,17 @@ export default function ModalEdit({
                   <strong>TAGS</strong>
                 </div>
                 <ul className="tag-content">
-                  {editNote.tags.length > 0 &&
-                    editNote.tags.map(({tag, index}: {tag: string; index: number}) => (
+                  {localEditNote.tags.length > 0 &&
+                    localEditNote.tags.map(({tag, index}: {tag: string; index: number}) => (
                       <li key={index}>
                         <MDBBadge
                           pill
                           light
                           className="tag-badge"
-                          onClick={() => handleDeleteTag(index)}
+                          onClick={() => {
+                            const updatedTags = localEditNote.tags.filter((_: string, i: number) => i !== index);
+                            setLocalEditNote({...localEditNote, tags: updatedTags});
+                          }}
                           style={{ cursor: "pointer" }}
                         >
                           {tag} ✕
@@ -128,9 +142,15 @@ export default function ModalEdit({
                       name="tag"
                       label="Tag..."
                       type="text"
-                      value={newTag} // Enlazado al estado
-                      onChange={(e) => setNewTag(e.target.value)} // Guardar valor en estado
-                      onKeyPress={(e) => handleAddTag(e)} // Agregar al presionar Enter
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === "Enter" && newTag.trim() !== "") {
+                          e.preventDefault();
+                          setLocalEditNote({...localEditNote, tags: [...localEditNote.tags, newTag.trim()]});
+                          setNewTag("");
+                        }
+                      }}
                     />
                   </li>
                 </ul>
@@ -151,15 +171,20 @@ export default function ModalEdit({
                       {usersClient
                         .filter(
                           (user: any) =>
-                            !editNote.members.some(
+                            !localEditNote.members.some(
                               (member: any) => member.user_id === user.user_id
                             )
-                        ) // Filtra los que ya están
+                        )
                         .map((user: any) => (
                           <MDBDropdownItem
                             key={user.user_id}
                             link
-                            onClick={() => handleAddMember(user.user_id)}
+                            onClick={() => {
+                              setLocalEditNote({
+                                ...localEditNote,
+                                members: [...localEditNote.members, {user_id: user.user_id}]
+                              });
+                            }}
                           >
                             {user.full_name}
                           </MDBDropdownItem>
@@ -178,9 +203,9 @@ export default function ModalEdit({
                     </tr>
                   </MDBTableHead>
                   <MDBTableBody>
-                    {editNote.members.map((member: any) => {
+                    {localEditNote.members.map((member: any) => {
                       const userId =
-                        typeof member === "object" ? member.user_id : member; // Asegura obtener el user_id
+                        typeof member === "object" ? member.user_id : member;
                       const user = usersClient.find(
                         (user: any) => user.user_id === userId
                       );
@@ -219,7 +244,12 @@ export default function ModalEdit({
                               className="mx-2"
                               color="tertiary"
                               rippleColor="light"
-                              onClick={() => handleDeleteMember(user.user_id)}
+                              onClick={() => {
+                                const updatedMembers = localEditNote.members.filter(
+                                  (m: any) => m.user_id !== user.user_id
+                                );
+                                setLocalEditNote({...localEditNote, members: updatedMembers});
+                              }}
                             >
                               🗑️
                             </MDBBtn>
@@ -243,9 +273,11 @@ export default function ModalEdit({
                       style={{
                         cursor: "pointer",
                         fontWeight:
-                          editNote.priority === level ? "bold" : "normal",
+                          localEditNote.priority === level ? "bold" : "normal",
                       }}
-                      onClick={() => handleChange("priority", level)}
+                      onClick={() => {
+                        setLocalEditNote({...localEditNote, priority: level});
+                      }}
                     >
                       {level === "low" && "Baja:"}
                       {level === "medium" && "Media:"}
@@ -267,16 +299,16 @@ export default function ModalEdit({
                   name="deadline"
                   label="DeaLine..."
                   type="date"
-                  value={editNote.dates.deadline || ""} // Enlazado al estado
-                  onChange={(e) =>
-                    setEditNote((prevNote: any) => ({
+                  value={localEditNote.dates?.deadline || ""} // Enlazado al estado local
+                  onChange={(e) => {
+                    setLocalEditNote((prevNote: any) => ({
                       ...prevNote,
                       dates: {
                         ...prevNote.dates,
                         deadline: e.target.value,
                       },
-                    }))
-                  } // Agregar al presionar Enter
+                    }));
+                  }}
                 />
               </div>
               <div className="labelForm">
@@ -287,8 +319,10 @@ export default function ModalEdit({
                 <MDBTextArea
                   label="Description..."
                   rows={4}
-                  value={editNote.description}
-                  onChange={(e) => handleChange("description", e.target.value)}
+                  value={localEditNote.description}
+                  onChange={(e) => {
+                    setLocalEditNote({...localEditNote, description: e.target.value});
+                  }}
                 />
               </div>
               <div className="labelForm">
@@ -316,7 +350,7 @@ export default function ModalEdit({
                     </tr>
                   </MDBTableHead>
                   <MDBTableBody>
-                    {editNote.checklist.map((check: any) => (
+                    {localEditNote.checklist.map((check: any) => (
                       <tr key={check.id} className="check-item">
                         {/* Checkbox para marcar la tarea */}
                         <td>
@@ -431,15 +465,15 @@ export default function ModalEdit({
                     </tr>
                   </MDBTableHead>
                   <MDBTableBody>
-                    {editNote.comments.map((comment: any) => {
+                    {localEditNote.comments.map((comment: any) => {
                       const user = usersClient.find(
                         (user: any) => user.user_id === comment.user_id
                       );
 
                       const isEditable =
-                        user && user.user_id === currentUser.user_id; // Verifica si el comentario es editable por el usuario actual
+                        user && user.user_id === currentUser.user_id;
                       const isDeletable =
-                        user && user.user_id === currentUser.user_id; // Verifica si el comentario es eliminable por el usuario actual
+                        user && user.user_id === currentUser.user_id;
 
                       return (
                         <tr key={comment.id} className="check-item">
@@ -560,7 +594,10 @@ export default function ModalEdit({
               </MDBBtn>
               <MDBBtn
                 onClick={() => {
-                  handleSaveNote();
+                  // Guardar los cambios locales al estado padre
+                  // setEditNote ya guarda los cambios a través de handleUpdateColumn
+                  // No es necesario llamar a handleSaveNote() porque sería redundante
+                  setEditNote(localEditNote);
                   setScrollableModal1(false);
                 }}
               >
