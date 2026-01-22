@@ -202,7 +202,7 @@ export default function ModalEdit({
                             <span>{user.email}</span>
                           </td>
                           <td>
-                            {user.skills.map(({skill, index}: {skill: string; index: number}) => (
+                            {user.skills.map((skill: string, index: number) => (
                               <MDBBadge
                                 key={index}
                                 pill
@@ -734,7 +734,7 @@ export default function ModalEdit({
                             <span>{user.email}</span>
                           </td>
                           <td>
-                            {user.skills.map(({skill, index}: {skill: string; index: number}) => (
+                            {user.skills.map((skill: string, index: number) => (
                               <MDBBadge
                                 key={index}
                                 pill

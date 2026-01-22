@@ -14,6 +14,10 @@ import {
   MDBModalTitle,
   MDBModalBody,
   MDBModalFooter,
+  MDBDropdown,
+  MDBDropdownToggle,
+  MDBDropdownMenu,
+  MDBDropdownItem,
 } from "mdb-react-ui-kit";
 import KanbanColumnNote from "./KanbanColumnNote";
 
@@ -45,6 +49,9 @@ interface KanbanColumnNotesProps {
   handleUpdateColumn: (column: Column) => void;
   handleAddNote: (note: Note) => void;
   usersClient: any[];
+  handleAddMember: (userId: string, noteId?: string) => void;
+  handleDeleteMember: (userId: string, noteId: string) => void;
+  selectedProject: any;
 }
 
 interface NoteValue {
@@ -66,6 +73,9 @@ export default function KanbanColumnNotes({
   handleUpdateColumn,
   handleAddNote,
   usersClient,
+  handleAddMember,
+  handleDeleteMember,
+  selectedProject,
 }: KanbanColumnNotesProps) {
   const [scrollableModal, setScrollableModal] = useState(false);
   const [toggleTwoModal, setToggleTwoModal] = useState(false);
@@ -178,6 +188,31 @@ export default function KanbanColumnNotes({
       comments: prev.comments.filter((comment) => comment.id !== id),
     }));
   };
+
+  // Eliminar un miembro de noteValue
+  const handleRemoveMember = (userId: string) => {
+    setNoteValue((prev) => ({
+      ...prev,
+      members: prev.members.filter((member) => member.user_id !== userId),
+    }));
+  };
+
+  // Agregar un miembro a noteValue (para nota nueva)
+  const handleAddMemberLocal = (userId: string) => {
+    if (!userId) return;
+
+    const exists = noteValue.members.some((m) => m.user_id === userId);
+    if (!exists) {
+      setNoteValue((prev) => ({
+        ...prev,
+        members: [...prev.members, { user_id: userId }],
+      }));
+    }
+  };
+
+  // KanbanColumnNotes.tsx
+  // handleAddMember ahora viene del componente padre (KanbanColumn.tsx)
+
   return (
     <>
       {column.notes.map((note) => (
@@ -187,6 +222,8 @@ export default function KanbanColumnNotes({
           note={note}
           handleUpdateColumn={handleUpdateColumn}
           usersClient={usersClient}
+          handleAddMember={handleAddMember}
+          handleDeleteMember={handleDeleteMember}
         />
       ))}
       <MDBBtn
@@ -262,24 +299,96 @@ export default function KanbanColumnNotes({
                 <div className="add-tag-title">
                   <i className="material-icons">group</i>
                   <strong>MEMBERS</strong>
-                </div>
-                <ul className="tag-content">
-                  <li>
-                    <MDBBtn
-                      className="mx-2"
-                      color="tertiary"
-                      rippleColor="light"
-                      onClick={() => {
-                        setScrollableModal(!scrollableModal);
-                        setTimeout(() => {
-                          setToggleTwoModal(!toggleTwoModal);
-                        }, 400);
-                      }}
+                  {/* Dropdown para agregar nuevos miembros */}
+                  <MDBDropdown>
+                    <MDBDropdownToggle
+                      className="btn btn-outline-primary"
+                      size="sm"
                     >
-                      Add new member
-                    </MDBBtn>
-                  </li>
-                </ul>
+                      Add Member
+                    </MDBDropdownToggle>
+                    <MDBDropdownMenu>
+                      {usersClient
+                        .filter(
+                          (user: any) =>
+                            !noteValue.members.some(
+                              (member: any) => member.user_id === user.user_id
+                            )
+                        )
+                        .map((user: any) => (
+                          <MDBDropdownItem
+                            key={user.user_id}
+                            link
+                            onClick={() => handleAddMemberLocal(user.user_id)}
+                          >
+                            {user.full_name}
+                          </MDBDropdownItem>
+                        ))}
+                    </MDBDropdownMenu>
+                  </MDBDropdown>
+                </div>
+                <MDBTable align="middle" small>
+                  <MDBTableHead light>
+                    <tr>
+                      <th scope="col">Image</th>
+                      <th scope="col">Full Name</th>
+                      <th scope="col">Email</th>
+                      <th scope="col">Skills</th>
+                      <th scope="col">Action</th>
+                    </tr>
+                  </MDBTableHead>
+                  <MDBTableBody>
+                    {noteValue.members.map((member: any) => {
+                      const userId =
+                        typeof member === "object" ? member.user_id : member;
+                      const user = usersClient.find(
+                        (user: any) => user.user_id === userId
+                      );
+
+                      return user ? (
+                        <tr key={user.user_id}>
+                          <td>
+                            <img
+                              src={user.image}
+                              alt=""
+                              style={{ width: "35px", height: "35px" }}
+                              className="rounded-circle"
+                            />
+                          </td>
+                          <td>
+                            <span className="fw-bold">{user.full_name}</span>
+                          </td>
+                          <td>
+                            <span>{user.email}</span>
+                          </td>
+                          <td>
+                            {user.skills.map((skill: string, index: number) => (
+                              <MDBBadge
+                                key={index}
+                                pill
+                                light
+                                className="tag-badge"
+                                style={{ cursor: "pointer" }}
+                              >
+                                {skill}
+                              </MDBBadge>
+                            ))}
+                          </td>
+                          <td>
+                            <MDBBtn
+                              className="mx-2"
+                              color="tertiary"
+                              rippleColor="light"
+                              onClick={() => handleRemoveMember(user.user_id)}
+                            >
+                              🗑️
+                            </MDBBtn>
+                          </td>
+                        </tr>
+                      ) : null;
+                    })}
+                  </MDBTableBody>
+                </MDBTable>
               </div>
               <div className="labelForm">
                 <div className="add-tag-title">

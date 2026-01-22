@@ -70,6 +70,8 @@ export default function KanbanColumnNote({
   note,
   handleUpdateColumn,
   usersClient,
+  handleAddMember,
+  handleDeleteMember,
 }: any) {
   const newNote: Note = {
     id: "",
@@ -329,7 +331,7 @@ export default function KanbanColumnNote({
     }
   };
 
-  const handleAddMember = (userId: any) => {
+  /*const handleAddMember = (userId: any) => {
     if (!userId) return;
 
     const userExists = editNote.members.some(
@@ -341,9 +343,10 @@ export default function KanbanColumnNote({
         members: [...prevNote.members, { user_id: userId }],
       }));
     }
-  };
+  };*/
 
-  const handleDeleteMember = (userId: any) => {
+  // ❌ Eliminar miembro de editNote (estado local)
+  const handleDeleteMemberLocal = (userId: any) => {
     const updatedMembers = editNote.members.filter(
       (member) => member.user_id !== userId
     );
@@ -351,6 +354,22 @@ export default function KanbanColumnNote({
       ...prevNote,
       members: updatedMembers,
     }));
+  };
+
+  // ➕ Agregar miembro a editNote (estado local)
+  const handleAddMemberLocal = (userId: string) => {
+    if (!userId || !editNote) return;
+
+    const userExists = editNote.members.some(
+      (member) => member.user_id === userId
+    );
+    
+    if (!userExists) {
+      setEditNote((prevNote) => ({
+        ...prevNote,
+        members: [...prevNote.members, { user_id: userId }],
+      }));
+    }
   };
 
   const checks = note.checklist.length;
@@ -480,7 +499,12 @@ export default function KanbanColumnNote({
       {/* EDIT TAG */}
       <ModalEdit
         editNote={editNote}
-        setEditNote={setEditNote}
+        setEditNote={(updatedNote: Note) => { // <-- declarar tipo
+          const updatedNotes = column.notes.map((n: Note) =>
+            n.id === editNote.id ? updatedNote : n // <-- usar editNote.id, no note.id
+          );
+          handleUpdateColumn({ ...column, notes: updatedNotes });
+        }}
         scrollableModal1={scrollableModal1}
         setScrollableModal1={setScrollableModal1}
         newTag={newTag}
@@ -493,8 +517,8 @@ export default function KanbanColumnNote({
         handleChange={handleChange}
         handleAddTag={handleAddTag}
         handleDeleteTag={handleDeleteTag}
-        handleAddMember={handleAddMember}
-        handleDeleteMember={handleDeleteMember}
+        handleAddMember={handleAddMemberLocal}
+        handleDeleteMember={handleDeleteMemberLocal}
         addCheck={addCheck}
         setAddCheck={setAddCheck}
         handleAddTagCheck={handleAddTagCheck}
@@ -503,6 +527,7 @@ export default function KanbanColumnNote({
         handleChangeChecklist={handleChangeChecklist}
         handleDeleteComment={handleDeleteComment}
         handleDeleteTagCheck={handleDeleteTagCheck}
+        handleChangeComment={handleChangeComment}
         handleSaveNote={handleSaveNote}
       />
       {/* EDIT CHECK */}

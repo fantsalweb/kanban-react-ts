@@ -73,11 +73,7 @@ export default function KanbanColumn({
       title: noteValue.title,
       description: noteValue.description,
       checklist: noteValue.checklist,
-      members: [
-        {
-          user_id: "1",
-        },
-      ],
+      members: noteValue.members || [],
       tags: noteValue.tags,
       priority: noteValue.priority,
       dates: {
@@ -94,6 +90,60 @@ export default function KanbanColumn({
 
     handleUpdateProject({ ...selectedProject, columns: updatedColumns });
   };
+
+  // ➕ Agregar o actualizar miembros en una nota (nueva o existente)
+  const handleAddMember = (userId: string, noteId?: string) => {
+    if (!userId) return;
+
+    // Caso 1: Actualizar nota EXISTENTE
+    if (noteId) {
+      const updatedColumns = selectedProject.columns.map((col: any) => {
+        if (col.id === columnId) {
+          const updatedNotes = col.notes.map((note: any) => {
+            if (note.id === noteId) {
+              const memberExists = note.members.some(
+                (m: any) => m.user_id === userId
+              );
+              if (!memberExists) {
+                return {
+                  ...note,
+                  members: [...note.members, { user_id: userId }],
+                };
+              }
+            }
+            return note;
+          });
+          return { ...col, notes: updatedNotes };
+        }
+        return col;
+      });
+      handleUpdateProject({ ...selectedProject, columns: updatedColumns });
+    }
+    // Caso 2: Se manejará en KanbanColumnNotes directamente para nota nueva
+  };
+
+  // ❌ Eliminar miembro de una nota existente
+  const handleDeleteMember = (userId: string, noteId: string) => {
+    const updatedColumns = selectedProject.columns.map((col: any) => {
+      if (col.id === columnId) {
+        const updatedNotes = col.notes.map((note: any) => {
+          if (note.id === noteId) {
+            return {
+              ...note,
+              members: note.members.filter(
+                (m: any) => m.user_id !== userId
+              ),
+            };
+          }
+          return note;
+        });
+        return { ...col, notes: updatedNotes };
+      }
+      return col;
+    });
+    handleUpdateProject({ ...selectedProject, columns: updatedColumns });
+  };
+  
   return (
     <article className={`column ${column.color}`}>
       <header>
@@ -122,6 +172,9 @@ export default function KanbanColumn({
         handleAddNote={handleAddNote}
         handleUpdateColumn={handleUpdateColumn}
         usersClient={usersClient}
+        handleAddMember={handleAddMember}
+        handleDeleteMember={handleDeleteMember}
+        selectedProject={selectedProject}
       />
       {/* Modal para editar nombre */}
       <MDBModal
