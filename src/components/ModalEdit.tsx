@@ -55,6 +55,8 @@ export default function ModalEdit({
 }: any) {
   const [scrollableModal3, setScrollableModal3] = useState(false);
   const [scrollableModal4, setScrollableModal4] = useState(false);
+  const [scrollableModalViewCheck, setScrollableModalViewCheck] = useState(false);
+  const [selectedCheckView, setSelectedCheckView] = useState<any>(null);
   // Estado local para el modal - evita guardar cambios hasta que el usuario haga click en "Save changes"
   const [localEditNote, setLocalEditNote] = useState(editNote);
 
@@ -446,6 +448,17 @@ export default function ModalEdit({
                           })}
                         </td>
                         <td>
+                          <MDBBtn
+                            className="mx-2"
+                            color="tertiary"
+                            rippleColor="light"
+                            onClick={() => {
+                              setSelectedCheckView(check);
+                              setScrollableModalViewCheck(true);
+                            }}
+                          >
+                            👁️
+                          </MDBBtn>
                           <MDBBtn
                             className="mx-2"
                             color="tertiary"
@@ -871,6 +884,143 @@ export default function ModalEdit({
                 }}
               >
                 Add Check
+              </MDBBtn>
+            </MDBModalFooter>
+          </MDBModalContent>
+        </MDBModalDialog>
+      </MDBModal>
+      {/* VIEW CHECK MODAL */}
+      <MDBModal
+        open={scrollableModalViewCheck}
+        onClose={() => setScrollableModalViewCheck(false)}
+        tabIndex="-1"
+      >
+        <MDBModalDialog scrollable>
+          <MDBModalContent>
+            <MDBModalHeader>
+              <MDBModalTitle>VIEW CHECK</MDBModalTitle>
+              <MDBBtn
+                className="btn-close"
+                color="none"
+                onClick={() => setScrollableModalViewCheck(false)}
+              ></MDBBtn>
+            </MDBModalHeader>
+            <MDBModalBody>
+              {selectedCheckView && (
+                <>
+                  <div className="labelForm">
+                    <div className="add-tag-title">
+                      <i className="material-icons">done</i>
+                      <strong>TITLE</strong>
+                    </div>
+                    <p>{selectedCheckView.title}</p>
+                  </div>
+                  <div className="labelForm">
+                    <div className="add-tag-title">
+                      <i className="material-icons">priority_high</i>
+                      <strong>PRIORITY</strong>
+                    </div>
+                    <ul className="tag-content">
+                      <li className="grid">
+                        <span
+                          className={`priority ${selectedCheckView.priority || "low"}`}
+                          title={selectedCheckView.priority || "low"}
+                        ></span>
+                        <span style={{ marginLeft: "10px" }}>
+                          {selectedCheckView.priority === "low" && "Baja"}
+                          {selectedCheckView.priority === "medium" && "Media"}
+                          {selectedCheckView.priority === "high" && "Alta"}
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="labelForm">
+                    <div className="add-tag-title">
+                      <i className="material-icons">tag</i>
+                      <strong>TAGS</strong>
+                    </div>
+                    <ul className="tag-content">
+                      {selectedCheckView.tags && selectedCheckView.tags.length > 0 ? (
+                        selectedCheckView.tags.map((tag: string, index: number) => (
+                          <li key={index}>
+                            <MDBBadge pill light>
+                              {tag}
+                            </MDBBadge>
+                          </li>
+                        ))
+                      ) : (
+                        <p style={{ color: "#999" }}>No tags</p>
+                      )}
+                    </ul>
+                  </div>
+                  <div className="labelForm">
+                    <div className="add-tag-title">
+                      <i className="material-icons">group</i>
+                      <strong>MEMBERS</strong>
+                    </div>
+                    <MDBTable align="middle" small>
+                      <MDBTableHead light>
+                        <tr>
+                          <th scope="col">Image</th>
+                          <th scope="col">Full Name</th>
+                          <th scope="col">Email</th>
+                          <th scope="col">Skills</th>
+                        </tr>
+                      </MDBTableHead>
+                      <MDBTableBody>
+                        {selectedCheckView.members && selectedCheckView.members.length > 0 ? (
+                          selectedCheckView.members.map((member: any) => {
+                            const userId =
+                              typeof member === "object" ? member.user_id : member;
+                            const user = usersClient.find(
+                              (user: any) => user.user_id === userId
+                            );
+
+                            return user ? (
+                              <tr key={user.user_id}>
+                                <td>
+                                  <img
+                                    src={user.image}
+                                    alt=""
+                                    style={{ width: "35px", height: "35px" }}
+                                    className="rounded-circle"
+                                  />
+                                </td>
+                                <td>
+                                  <span className="fw-bold">{user.full_name}</span>
+                                </td>
+                                <td>
+                                  <span>{user.email}</span>
+                                </td>
+                                <td>
+                                  {user.skills.map((skill: string, index: number) => (
+                                    <MDBBadge key={index} pill light className="tag-badge">
+                                      {skill}
+                                    </MDBBadge>
+                                  ))}
+                                </td>
+                              </tr>
+                            ) : null;
+                          })
+                        ) : (
+                          <tr>
+                            <td colSpan={4}>
+                              <p style={{ color: "#999", textAlign: "center" }}>No members assigned</p>
+                            </td>
+                          </tr>
+                        )}
+                      </MDBTableBody>
+                    </MDBTable>
+                  </div>
+                </>
+              )}
+            </MDBModalBody>
+            <MDBModalFooter>
+              <MDBBtn
+                color="secondary"
+                onClick={() => setScrollableModalViewCheck(false)}
+              >
+                Close
               </MDBBtn>
             </MDBModalFooter>
           </MDBModalContent>
