@@ -121,7 +121,7 @@ export default function ModalEdit({
                 </div>
                 <ul className="tag-content">
                   {localEditNote.tags.length > 0 &&
-                    localEditNote.tags.map(({tag, index}: {tag: string; index: number}) => (
+                    localEditNote.tags.map((tag: string, index: number) => (
                       <li key={index}>
                         <MDBBadge
                           pill
@@ -677,7 +677,7 @@ export default function ModalEdit({
                 </div>
                 <ul className="tag-content">
                   {addCheck.tags.length > 0 &&
-                    addCheck.tags.map(({tag, index}: {tag: string; index: number}) =>
+                    addCheck.tags.map((tag: string, index: number) =>
                       tag ? (
                         <li key={index}>
                           <MDBBadge
