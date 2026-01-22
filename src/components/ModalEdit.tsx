@@ -54,10 +54,24 @@ export default function ModalEdit({
   handleSaveNote
 }: any) {
   const [scrollableModal3, setScrollableModal3] = useState(false);
+  const [scrollableModal4, setScrollableModal4] = useState(false);
   // Estado local para el modal - evita guardar cambios hasta que el usuario haga click en "Save changes"
   const [localEditNote, setLocalEditNote] = useState(editNote);
 
+  // Estado para el nuevo check completo a agregar
+  const [newCheckFull, setNewCheckFull] = useState<any>({
+    id: "",
+    title: "",
+    priority: "low",
+    members: [] as any[],
+    tags: [] as string[],
+    finished: false,
+  });
+
   // Sincronizar el estado local cuando editNote cambia (cuando se abre el modal)
+  useEffect(() => {
+    setLocalEditNote(editNote);
+  }, [editNote, scrollableModal1]);
   useEffect(() => {
     setLocalEditNote(editNote);
   }, [editNote, scrollableModal1]);
@@ -333,7 +347,17 @@ export default function ModalEdit({
                     className="mx-2"
                     color="tertiary"
                     rippleColor="light"
-                    onClick={() => setScrollableModal3(!scrollableModal3)}
+                    onClick={() => {
+                      setNewCheckFull({
+                        id: String(localEditNote.checklist.length + 1),
+                        title: "",
+                        priority: "low",
+                        members: [],
+                        tags: [],
+                        finished: false,
+                      });
+                      setScrollableModal4(!scrollableModal4);
+                    }}
                   >
                     + Add a check ...
                   </MDBBtn>
@@ -359,11 +383,14 @@ export default function ModalEdit({
                             checked={check.finished}
                             onChange={
                               (e) =>
-                                handleChangeChecklist(
-                                  check.id,
-                                  "finished",
-                                  e.target.checked
-                                ) // Cambiar estado de "finished"
+                                setLocalEditNote({
+                                  ...localEditNote,
+                                  checklist: localEditNote.checklist.map((c: any) =>
+                                    c.id === check.id
+                                      ? { ...c, finished: e.target.checked }
+                                      : c
+                                  ),
+                                })
                             }
                           />
                         </td>
@@ -609,8 +636,8 @@ export default function ModalEdit({
       </MDBModal>
       {/* ADD CHECK */}
       <MDBModal
-        open={scrollableModal3}
-        onClose={() => setScrollableModal3(false)}
+        open={scrollableModal4}
+        onClose={() => setScrollableModal4(false)}
         tabIndex="-1"
       >
         <MDBModalDialog scrollable size="lg">
@@ -621,7 +648,7 @@ export default function ModalEdit({
                 className="btn-close"
                 color="none"
                 onClick={() => {
-                  setScrollableModal3(!scrollableModal3);
+                  setScrollableModal4(!scrollableModal4);
                 }}
               ></MDBBtn>
             </MDBModalHeader>
@@ -635,8 +662,8 @@ export default function ModalEdit({
                   name="check"
                   label="Check..."
                   type="text"
-                  value={addCheck.title}
-                  onChange={(e) => setAddCheck(e.target.value)}
+                  value={newCheckFull.title}
+                  onChange={(e) => setNewCheckFull({...newCheckFull, title: e.target.value})}
                 />
               </div>
               <div className="labelForm">
@@ -650,13 +677,12 @@ export default function ModalEdit({
                       key={level}
                       className="grid"
                       onClick={() => {
-                        setAddCheck({ ...addCheck, priority: level });
-                        console.log(addCheck);
+                        setNewCheckFull({ ...newCheckFull, priority: level });
                       }}
                       style={{
                         cursor: "pointer",
                         fontWeight:
-                          addCheck.priority === level ? "bold" : "normal",
+                          newCheckFull.priority === level ? "bold" : "normal",
                       }}
                     >
                       {level === "low" && "Baja:"}
@@ -676,15 +702,18 @@ export default function ModalEdit({
                   <strong>TAGS</strong>
                 </div>
                 <ul className="tag-content">
-                  {addCheck.tags.length > 0 &&
-                    addCheck.tags.map((tag: string, index: number) =>
+                  {newCheckFull.tags.length > 0 &&
+                    newCheckFull.tags.map((tag: string, index: number) =>
                       tag ? (
                         <li key={index}>
                           <MDBBadge
                             pill
                             light
                             className="tag-badge"
-                            onClick={() => handleDeleteTagCheck(index)} // Hacer clic para eliminar
+                            onClick={() => {
+                              const updatedTags = newCheckFull.tags.filter((_: string, i: number) => i !== index);
+                              setNewCheckFull({...newCheckFull, tags: updatedTags});
+                            }}
                             style={{ cursor: "pointer" }}
                           >
                             {tag} ✕
@@ -697,9 +726,15 @@ export default function ModalEdit({
                       name="tag"
                       label="Tag..."
                       type="text"
-                      value={newTag} // Enlazado al estado
-                      onChange={(e) => setNewTag(e.target.value)} // Guardar valor en estado
-                      onKeyPress={(e) => handleAddTagCheck(e)} // Agregar al presionar Enter
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      onKeyPress={(e) => {
+                        if (e.key === "Enter" && newTag.trim() !== "") {
+                          e.preventDefault();
+                          setNewCheckFull({...newCheckFull, tags: [...newCheckFull.tags, newTag.trim()]});
+                          setNewTag("");
+                        }
+                      }}
                     />
                   </li>
                 </ul>
@@ -708,7 +743,6 @@ export default function ModalEdit({
                 <div className="add-tag-title">
                   <i className="material-icons">group</i>
                   <strong>MEMBERS</strong>
-                  {/* Dropdown para agregar nuevos miembros */}
                   <MDBDropdown>
                     <MDBDropdownToggle
                       className="btn btn-outline-primary"
@@ -720,15 +754,20 @@ export default function ModalEdit({
                       {usersClient
                         .filter(
                           (user: any) =>
-                            !addCheck.members.some(
+                            !newCheckFull.members.some(
                               (member: any) => member.user_id === user.user_id
                             )
-                        ) // Filtra los que ya están
+                        )
                         .map((user: any) => (
                           <MDBDropdownItem
                             key={user.user_id}
                             link
-                            onClick={() => handleAddMember(user.user_id)}
+                            onClick={() => {
+                              setNewCheckFull({
+                                ...newCheckFull,
+                                members: [...newCheckFull.members, {user_id: user.user_id}]
+                              });
+                            }}
                           >
                             {user.full_name}
                           </MDBDropdownItem>
@@ -747,9 +786,9 @@ export default function ModalEdit({
                     </tr>
                   </MDBTableHead>
                   <MDBTableBody>
-                    {addCheck.members.map((member: any) => {
+                    {newCheckFull.members.map((member: any) => {
                       const userId =
-                        typeof member === "object" ? member.user_id : member; // Asegura obtener el user_id
+                        typeof member === "object" ? member.user_id : member;
                       const user = usersClient.find(
                         (user: any) => user.user_id === userId
                       );
@@ -788,7 +827,12 @@ export default function ModalEdit({
                               className="mx-2"
                               color="tertiary"
                               rippleColor="light"
-                              onClick={() => handleDeleteMember(user.user_id)}
+                              onClick={() => {
+                                const updatedMembers = newCheckFull.members.filter(
+                                  (m: any) => m.user_id !== user.user_id
+                                );
+                                setNewCheckFull({...newCheckFull, members: updatedMembers});
+                              }}
                             >
                               🗑️
                             </MDBBtn>
@@ -803,11 +847,31 @@ export default function ModalEdit({
             <MDBModalFooter>
               <MDBBtn
                 color="secondary"
-                onClick={() => setScrollableModal3(false)}
+                onClick={() => setScrollableModal4(false)}
               >
                 Close
               </MDBBtn>
-              <MDBBtn>Save changes</MDBBtn>
+              <MDBBtn
+                onClick={() => {
+                  if (newCheckFull.title.trim() !== "") {
+                    setLocalEditNote({
+                      ...localEditNote,
+                      checklist: [...localEditNote.checklist, newCheckFull]
+                    });
+                    setNewCheckFull({
+                      id: "",
+                      title: "",
+                      priority: "low",
+                      members: [],
+                      tags: [],
+                      finished: false,
+                    });
+                    setScrollableModal4(false);
+                  }
+                }}
+              >
+                Add Check
+              </MDBBtn>
             </MDBModalFooter>
           </MDBModalContent>
         </MDBModalDialog>

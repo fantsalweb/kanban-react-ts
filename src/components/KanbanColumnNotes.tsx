@@ -79,6 +79,9 @@ export default function KanbanColumnNotes({
 }: KanbanColumnNotesProps) {
   const [scrollableModal, setScrollableModal] = useState(false);
   const [toggleTwoModal, setToggleTwoModal] = useState(false);
+  const [scrollableModal4, setScrollableModal4] = useState(false);
+  const [scrollableModalEditCheck, setScrollableModalEditCheck] = useState(false);
+  const [selectedCheckEdit, setSelectedCheckEdit] = useState<any>(null);
   const currentDate = new Date();
   const dateToday = currentDate.toISOString().split("T")[0];
   const [noteValue, setNoteValue] = useState<NoteValue>({
@@ -98,9 +101,18 @@ export default function KanbanColumnNotes({
     files: [],
   });
   const [newTag, setNewTag] = useState(""); // Estado para el input individual
+  const [newCheckTag, setNewCheckTag] = useState(""); // Estado para el input de tags en ADD CHECK modal
   /*const currentDate = new Date();
   const dateToday = currentDate.toISOString().split("T")[0];*/
   const [newCheck, setNewCheck] = useState("");
+  const [newCheckFull, setNewCheckFull] = useState<any>({
+    id: "",
+    title: "",
+    priority: "low",
+    members: [] as any[],
+    tags: [] as string[],
+    finished: false,
+  });
   const [newComment, setNewComment] = useState("");
   noteValue.dates.createdAt = dateToday;
   const currentUser = "1";
@@ -155,6 +167,70 @@ export default function KanbanColumnNotes({
       ...prev,
       checklist: prev.checklist.filter((check) => check.id !== id),
     }));
+  };
+
+  // Agregar tag al nuevo check
+  const handleAddCheckTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && newCheckTag.trim() !== "") {
+      setNewCheckFull((prev: any) => ({
+        ...prev,
+        tags: [...prev.tags, newCheckTag.trim()],
+      }));
+      setNewCheckTag("");
+      e.preventDefault();
+    }
+  };
+
+  // Remover tag del nuevo check
+  const handleRemoveCheckTag = (index: number) => {
+    setNewCheckFull((prev: any) => ({
+      ...prev,
+      tags: prev.tags.filter((_: string, i: number) => i !== index),
+    }));
+  };
+
+  // Agregar miembro al nuevo check
+  const handleAddCheckMember = (userId: string) => {
+    if (!userId) return;
+
+    const exists = newCheckFull.members.some(
+      (m: any) => (typeof m === "object" ? m.user_id : m) === userId
+    );
+    if (!exists) {
+      setNewCheckFull((prev: any) => ({
+        ...prev,
+        members: [...prev.members, { user_id: userId }],
+      }));
+    }
+  };
+
+  // Remover miembro del nuevo check
+  const handleRemoveCheckMember = (userId: string) => {
+    setNewCheckFull((prev: any) => ({
+      ...prev,
+      members: prev.members.filter(
+        (member: any) =>
+          (typeof member === "object" ? member.user_id : member) !== userId
+      ),
+    }));
+  };
+
+  // Editar un check existente
+  const handleEditCheckModal = (check: any) => {
+    setSelectedCheckEdit({ ...check });
+    setScrollableModalEditCheck(true);
+  };
+
+  // Guardar cambios del check editado
+  const handleSaveCheckEdit = () => {
+    setNoteValue((prev) => ({
+      ...prev,
+      checklist: prev.checklist.map((c) =>
+        c.id === selectedCheckEdit.id ? selectedCheckEdit : c
+      ),
+    }));
+    setScrollableModalEditCheck(false);
+    setSelectedCheckEdit(null);
   };
   // Agregar un nuevo comentario
   const handleAddComment = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -471,37 +547,126 @@ export default function KanbanColumnNotes({
                 <div className="add-tag-title">
                   <i className="material-icons">checklist</i>
                   <strong>CHECKLIST</strong>
+                  <MDBBtn
+                    className="mx-2"
+                    color="tertiary"
+                    rippleColor="light"
+                    onClick={() => {
+                      setNewCheckFull({
+                        id: String(noteValue.checklist.length + 1),
+                        title: "",
+                        priority: "low",
+                        members: [],
+                        tags: [],
+                        finished: false,
+                      });
+                      setScrollableModal4(!scrollableModal4);
+                    }}
+                  >
+                    + Add a check ...
+                  </MDBBtn>
                 </div>
-                {/* Input SIEMPRE ARRIBA */}
-                <MDBInput
-                  name="check"
-                  label="Add check..."
-                  type="text"
-                  value={newCheck}
-                  onChange={(e) => setNewCheck(e.target.value)}
-                  onKeyDown={handleAddCheck}
-                />
-                {/* Lista de checks (debajo del input) */}
-                <ul className="checklist-content">
-                  {noteValue.checklist.map((check) => (
-                    <li key={check.id} className="check-item">
-                      <MDBInput
-                        type="text"
-                        value={check.title}
-                        onChange={(e) =>
-                          handleEditCheck(check.id, e.target.value)
-                        }
-                      />
-                      <MDBBtn
-                        color="danger"
-                        size="sm"
-                        onClick={() => handleRemoveCheck(check.id)}
-                      >
-                        ✕
-                      </MDBBtn>
-                    </li>
-                  ))}
-                </ul>
+                <MDBTable align="middle" small>
+                  <MDBTableHead light>
+                    <tr>
+                      <th scope="col"></th>
+                      <th scope="col">Priority</th>
+                      <th scope="col">Check</th>
+                      <th scope="col">Tags</th>
+                      <th scope="col">Members</th>
+                      <th scope="col">Action</th>
+                    </tr>
+                  </MDBTableHead>
+                  <MDBTableBody>
+                    {noteValue.checklist.map((check: any) => (
+                      <tr key={check.id} className="check-item">
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={check.finished || false}
+                            onChange={(e) =>
+                              setNoteValue((prev) => ({
+                                ...prev,
+                                checklist: prev.checklist.map((c) =>
+                                  c.id === check.id
+                                    ? { ...c, finished: e.target.checked }
+                                    : c
+                                ),
+                              }))
+                            }
+                          />
+                        </td>
+                        <td>
+                          <ul className="tag-content">
+                            <li className="grid">
+                              <span
+                                className={`priority ${check.priority || "low"}`}
+                                title={check.priority || "low"}
+                              ></span>
+                            </li>
+                          </ul>
+                        </td>
+                        <td>
+                          <div>
+                            <span>{check.title}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <ul className="tag-content">
+                            {check.tags &&
+                              check.tags.map((tag: string, i: number) => (
+                                <li key={i}>
+                                  <MDBBadge pill light>
+                                    {tag}
+                                  </MDBBadge>
+                                </li>
+                              ))}
+                          </ul>
+                        </td>
+                        <td>
+                          {check.members &&
+                            check.members.map((member: any) => {
+                              const userId =
+                                typeof member === "object"
+                                  ? member.user_id
+                                  : member;
+                              const user = usersClient.find(
+                                (user: any) => user.user_id === userId
+                              );
+                              return user ? (
+                                <img
+                                  key={user.user_id}
+                                  src={user.image}
+                                  alt={user.full_name}
+                                  title={user.full_name}
+                                  style={{ width: "35px", height: "35px" }}
+                                  className="rounded-circle"
+                                />
+                              ) : null;
+                            })}
+                        </td>
+                        <td>
+                          <MDBBtn
+                            className="mx-2"
+                            color="tertiary"
+                            rippleColor="light"
+                            onClick={() => handleEditCheckModal(check)}
+                          >
+                            ✏️
+                          </MDBBtn>
+                          <MDBBtn
+                            className="mx-2"
+                            color="tertiary"
+                            rippleColor="light"
+                            onClick={() => handleRemoveCheck(check.id)}
+                          >
+                            🗑️
+                          </MDBBtn>
+                        </td>
+                      </tr>
+                    ))}
+                  </MDBTableBody>
+                </MDBTable>
               </div>
               <div className="labelForm">
                 <div className="add-tag-title">
@@ -572,6 +737,497 @@ export default function KanbanColumnNotes({
               >
                 Save changes
               </MDBBtn>
+            </MDBModalFooter>
+          </MDBModalContent>
+        </MDBModalDialog>
+      </MDBModal>
+      <MDBModal
+        open={scrollableModal4}
+        onClose={() => setScrollableModal4(false)}
+        tabIndex="-1"
+      >
+        <MDBModalDialog scrollable>
+          <MDBModalContent>
+            <MDBModalHeader>
+              <MDBModalTitle>ADD NEW CHECK...</MDBModalTitle>
+              <MDBBtn
+                className="btn-close"
+                color="none"
+                onClick={() => setScrollableModal4(false)}
+              ></MDBBtn>
+            </MDBModalHeader>
+            <MDBModalBody>
+              <div className="labelForm">
+                <div className="add-tag-title">
+                  <i className="material-icons">done</i>
+                  <strong>TITLE</strong>
+                </div>
+                <MDBInput
+                  label="Title..."
+                  type="text"
+                  value={newCheckFull.title}
+                  onChange={(e) =>
+                    setNewCheckFull({
+                      ...newCheckFull,
+                      title: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="labelForm">
+                <div className="add-tag-title">
+                  <i className="material-icons">priority_high</i>
+                  <strong>PRIORITY</strong>
+                </div>
+                <ul className="tag-content">
+                  {["low", "medium", "high"].map((level) => (
+                    <li
+                      key={level}
+                      className="grid"
+                      onClick={() =>
+                        setNewCheckFull({
+                          ...newCheckFull,
+                          priority: level,
+                        })
+                      }
+                      style={{
+                        cursor: "pointer",
+                        fontWeight:
+                          newCheckFull.priority === level ? "bold" : "normal",
+                      }}
+                    >
+                      {level === "low" && "Baja:"}
+                      {level === "medium" && "Media:"}
+                      {level === "high" && "Alta:"}
+                      <span
+                        className={`priority ${level}`}
+                        title={level.charAt(0).toUpperCase() + level.slice(1)}
+                      ></span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="labelForm">
+                <div className="add-tag-title">
+                  <i className="material-icons">tag</i>
+                  <strong>TAGS</strong>
+                </div>
+                <ul className="tag-content">
+                  {newCheckFull.tags.length > 0 &&
+                    newCheckFull.tags.map((tag: string, index: number) => (
+                      <li key={index}>
+                        <MDBBadge
+                          pill
+                          light
+                          className="tag-badge"
+                          onClick={() => handleRemoveCheckTag(index)}
+                          style={{ cursor: "pointer" }}
+                        >
+                          {tag} ✕
+                        </MDBBadge>
+                      </li>
+                    ))}
+                  <li>
+                    <MDBInput
+                      label="Tag..."
+                      type="text"
+                      value={newCheckTag}
+                      onChange={(e) => setNewCheckTag(e.target.value)}
+                      onKeyDown={handleAddCheckTag}
+                    />
+                  </li>
+                </ul>
+              </div>
+              <div className="labelForm">
+                <div className="add-tag-title">
+                  <i className="material-icons">group</i>
+                  <strong>MEMBERS</strong>
+                  <MDBDropdown>
+                    <MDBDropdownToggle
+                      className="btn btn-outline-primary"
+                      size="sm"
+                    >
+                      Add Member
+                    </MDBDropdownToggle>
+                    <MDBDropdownMenu>
+                      {usersClient
+                        .filter(
+                          (user: any) =>
+                            !newCheckFull.members.some(
+                              (member: any) =>
+                                (typeof member === "object"
+                                  ? member.user_id
+                                  : member) === user.user_id
+                            )
+                        )
+                        .map((user: any) => (
+                          <MDBDropdownItem
+                            key={user.user_id}
+                            link
+                            onClick={() => handleAddCheckMember(user.user_id)}
+                          >
+                            {user.full_name}
+                          </MDBDropdownItem>
+                        ))}
+                    </MDBDropdownMenu>
+                  </MDBDropdown>
+                </div>
+                <MDBTable align="middle" small>
+                  <MDBTableHead light>
+                    <tr>
+                      <th scope="col">Image</th>
+                      <th scope="col">Full Name</th>
+                      <th scope="col">Email</th>
+                      <th scope="col">Skills</th>
+                      <th scope="col">Action</th>
+                    </tr>
+                  </MDBTableHead>
+                  <MDBTableBody>
+                    {newCheckFull.members.map((member: any) => {
+                      const userId =
+                        typeof member === "object" ? member.user_id : member;
+                      const user = usersClient.find(
+                        (user: any) => user.user_id === userId
+                      );
+
+                      return user ? (
+                        <tr key={user.user_id}>
+                          <td>
+                            <img
+                              src={user.image}
+                              alt=""
+                              style={{ width: "35px", height: "35px" }}
+                              className="rounded-circle"
+                            />
+                          </td>
+                          <td>
+                            <span className="fw-bold">{user.full_name}</span>
+                          </td>
+                          <td>
+                            <span>{user.email}</span>
+                          </td>
+                          <td>
+                            {user.skills.map((skill: string, index: number) => (
+                              <MDBBadge
+                                key={index}
+                                pill
+                                light
+                                className="tag-badge"
+                              >
+                                {skill}
+                              </MDBBadge>
+                            ))}
+                          </td>
+                          <td>
+                            <MDBBtn
+                              className="mx-2"
+                              color="tertiary"
+                              rippleColor="light"
+                              onClick={() => handleRemoveCheckMember(user.user_id)}
+                            >
+                              🗑️
+                            </MDBBtn>
+                          </td>
+                        </tr>
+                      ) : null;
+                    })}
+                  </MDBTableBody>
+                </MDBTable>
+              </div>
+            </MDBModalBody>
+            <MDBModalFooter>
+              <MDBBtn
+                color="secondary"
+                onClick={() => setScrollableModal4(false)}
+              >
+                Close
+              </MDBBtn>
+              <MDBBtn
+                onClick={() => {
+                  if (newCheckFull.title.trim() !== "") {
+                    setNoteValue({
+                      ...noteValue,
+                      checklist: [...noteValue.checklist, newCheckFull],
+                    });
+                    setNewCheckFull({
+                      id: "",
+                      title: "",
+                      priority: "low",
+                      members: [],
+                      tags: [],
+                      finished: false,
+                    });
+                    setNewCheckTag("");
+                    setScrollableModal4(false);
+                  }
+                }}
+              >
+                Add Check
+              </MDBBtn>
+            </MDBModalFooter>
+          </MDBModalContent>
+        </MDBModalDialog>
+      </MDBModal>
+      {/* EDIT CHECK MODAL */}
+      <MDBModal
+        open={scrollableModalEditCheck}
+        onClose={() => setScrollableModalEditCheck(false)}
+        tabIndex="-1"
+      >
+        <MDBModalDialog scrollable>
+          <MDBModalContent>
+            <MDBModalHeader>
+              <MDBModalTitle>EDIT CHECK</MDBModalTitle>
+              <MDBBtn
+                className="btn-close"
+                color="none"
+                onClick={() => setScrollableModalEditCheck(false)}
+              ></MDBBtn>
+            </MDBModalHeader>
+            <MDBModalBody>
+              {selectedCheckEdit && (
+                <>
+                  <div className="labelForm">
+                    <div className="add-tag-title">
+                      <i className="material-icons">done</i>
+                      <strong>TITLE</strong>
+                    </div>
+                    <MDBInput
+                      label="Title..."
+                      type="text"
+                      value={selectedCheckEdit.title}
+                      onChange={(e) =>
+                        setSelectedCheckEdit({
+                          ...selectedCheckEdit,
+                          title: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="labelForm">
+                    <div className="add-tag-title">
+                      <i className="material-icons">priority_high</i>
+                      <strong>PRIORITY</strong>
+                    </div>
+                    <ul className="tag-content">
+                      {["low", "medium", "high"].map((level) => (
+                        <li
+                          key={level}
+                          className="grid"
+                          onClick={() =>
+                            setSelectedCheckEdit({
+                              ...selectedCheckEdit,
+                              priority: level,
+                            })
+                          }
+                          style={{
+                            cursor: "pointer",
+                            fontWeight:
+                              selectedCheckEdit.priority === level
+                                ? "bold"
+                                : "normal",
+                          }}
+                        >
+                          {level === "low" && "Baja:"}
+                          {level === "medium" && "Media:"}
+                          {level === "high" && "Alta:"}
+                          <span
+                            className={`priority ${level}`}
+                            title={
+                              level.charAt(0).toUpperCase() + level.slice(1)
+                            }
+                          ></span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="labelForm">
+                    <div className="add-tag-title">
+                      <i className="material-icons">tag</i>
+                      <strong>TAGS</strong>
+                    </div>
+                    <ul className="tag-content">
+                      {selectedCheckEdit.tags &&
+                        selectedCheckEdit.tags.length > 0 &&
+                        selectedCheckEdit.tags.map(
+                          (tag: string, index: number) => (
+                            <li key={index}>
+                              <MDBBadge
+                                pill
+                                light
+                                className="tag-badge"
+                                onClick={() => {
+                                  const updatedTags = selectedCheckEdit.tags.filter(
+                                    (_: string, i: number) => i !== index
+                                  );
+                                  setSelectedCheckEdit({
+                                    ...selectedCheckEdit,
+                                    tags: updatedTags,
+                                  });
+                                }}
+                                style={{ cursor: "pointer" }}
+                              >
+                                {tag} ✕
+                              </MDBBadge>
+                            </li>
+                          )
+                        )}
+                      <li>
+                        <MDBInput
+                          label="Tag..."
+                          type="text"
+                          value={newCheckTag}
+                          onChange={(e) => setNewCheckTag(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && newCheckTag.trim() !== "") {
+                              setSelectedCheckEdit({
+                                ...selectedCheckEdit,
+                                tags: [
+                                  ...selectedCheckEdit.tags,
+                                  newCheckTag.trim(),
+                                ],
+                              });
+                              setNewCheckTag("");
+                              e.preventDefault();
+                            }
+                          }}
+                        />
+                      </li>
+                    </ul>
+                  </div>
+                  <div className="labelForm">
+                    <div className="add-tag-title">
+                      <i className="material-icons">group</i>
+                      <strong>MEMBERS</strong>
+                      <MDBDropdown>
+                        <MDBDropdownToggle
+                          className="btn btn-outline-primary"
+                          size="sm"
+                        >
+                          Add Member
+                        </MDBDropdownToggle>
+                        <MDBDropdownMenu>
+                          {usersClient
+                            .filter(
+                              (user: any) =>
+                                !selectedCheckEdit.members.some(
+                                  (member: any) =>
+                                    (typeof member === "object"
+                                      ? member.user_id
+                                      : member) === user.user_id
+                                )
+                            )
+                            .map((user: any) => (
+                              <MDBDropdownItem
+                                key={user.user_id}
+                                link
+                                onClick={() => {
+                                  setSelectedCheckEdit({
+                                    ...selectedCheckEdit,
+                                    members: [
+                                      ...selectedCheckEdit.members,
+                                      { user_id: user.user_id },
+                                    ],
+                                  });
+                                }}
+                              >
+                                {user.full_name}
+                              </MDBDropdownItem>
+                            ))}
+                        </MDBDropdownMenu>
+                      </MDBDropdown>
+                    </div>
+                    <MDBTable align="middle" small>
+                      <MDBTableHead light>
+                        <tr>
+                          <th scope="col">Image</th>
+                          <th scope="col">Full Name</th>
+                          <th scope="col">Email</th>
+                          <th scope="col">Skills</th>
+                          <th scope="col">Action</th>
+                        </tr>
+                      </MDBTableHead>
+                      <MDBTableBody>
+                        {selectedCheckEdit.members &&
+                          selectedCheckEdit.members.map((member: any) => {
+                            const userId =
+                              typeof member === "object"
+                                ? member.user_id
+                                : member;
+                            const user = usersClient.find(
+                              (user: any) => user.user_id === userId
+                            );
+
+                            return user ? (
+                              <tr key={user.user_id}>
+                                <td>
+                                  <img
+                                    src={user.image}
+                                    alt=""
+                                    style={{ width: "35px", height: "35px" }}
+                                    className="rounded-circle"
+                                  />
+                                </td>
+                                <td>
+                                  <span className="fw-bold">
+                                    {user.full_name}
+                                  </span>
+                                </td>
+                                <td>
+                                  <span>{user.email}</span>
+                                </td>
+                                <td>
+                                  {user.skills.map(
+                                    (skill: string, index: number) => (
+                                      <MDBBadge
+                                        key={index}
+                                        pill
+                                        light
+                                        className="tag-badge"
+                                      >
+                                        {skill}
+                                      </MDBBadge>
+                                    )
+                                  )}
+                                </td>
+                                <td>
+                                  <MDBBtn
+                                    className="mx-2"
+                                    color="tertiary"
+                                    rippleColor="light"
+                                    onClick={() => {
+                                      const updatedMembers = selectedCheckEdit.members.filter(
+                                        (m: any) =>
+                                          (typeof m === "object"
+                                            ? m.user_id
+                                            : m) !== user.user_id
+                                      );
+                                      setSelectedCheckEdit({
+                                        ...selectedCheckEdit,
+                                        members: updatedMembers,
+                                      });
+                                    }}
+                                  >
+                                    🗑️
+                                  </MDBBtn>
+                                </td>
+                              </tr>
+                            ) : null;
+                          })}
+                      </MDBTableBody>
+                    </MDBTable>
+                  </div>
+                </>
+              )}
+            </MDBModalBody>
+            <MDBModalFooter>
+              <MDBBtn
+                color="secondary"
+                onClick={() => setScrollableModalEditCheck(false)}
+              >
+                Close
+              </MDBBtn>
+              <MDBBtn onClick={handleSaveCheckEdit}>Save changes</MDBBtn>
             </MDBModalFooter>
           </MDBModalContent>
         </MDBModalDialog>
