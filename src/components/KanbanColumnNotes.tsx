@@ -118,6 +118,10 @@ export default function KanbanColumnNotes({
   const [newComment, setNewComment] = useState("");
   noteValue.dates.createdAt = dateToday;
   const currentUser = "1";
+  // Estado para rastrear qué comentarios están siendo editados (mostrando el input)
+  const [editingComments, setEditingComments] = useState<Set<string>>(new Set());
+  const [scrollableModalViewComment, setScrollableModalViewComment] = useState(false);
+  const [selectedCommentView, setSelectedCommentView] = useState<any>(null);
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setNoteValue((prev) => ({ ...prev, [name]: value }));
@@ -234,37 +238,43 @@ export default function KanbanColumnNotes({
     setScrollableModalEditCheck(false);
     setSelectedCheckEdit(null);
   };
-  // Agregar un nuevo comentario
-  const handleAddComment = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter" && newComment.trim() !== "") {
-      setNoteValue((prev) => ({
-        ...prev,
-        comments: [
-          ...prev.comments,
-          { id: Date.now().toString(), user_id: currentUser, text: newComment },
-        ],
-      }));
-
-      setNewComment(""); // Limpiar input después de agregar
-      e.preventDefault();
-    }
-  };
-  // Editar un check existente asegurando el formato correcto
-  const handleEditComment = (id: string, newComment: string) => {
+  // Función para añadir un nuevo comentario vacío (se llama al hacer clic en el botón)
+  const handleAddCommentClick = () => {
+    const newCommentId = Date.now().toString();
+    const newCommentObj = {
+      id: newCommentId,
+      user_id: currentUser,
+      text: "",
+      replies: [] as any[],
+    };
     setNoteValue((prev) => ({
       ...prev,
-      comments: prev.comments.map((comment) =>
-        comment.id === id ? { ...comment, text: newComment } : comment
+      comments: [...(prev.comments || []), newCommentObj],
+    }));
+    // Marcar el nuevo comentario como en edición para mostrar el input
+    setEditingComments(new Set([...Array.from(editingComments), newCommentId]));
+  };
+
+  // Función para actualizar el texto de un comentario
+  const handleChangeCommentLocal = (commentId: string, field: string, value: string) => {
+    setNoteValue((prev) => ({
+      ...prev,
+      comments: (prev.comments || []).map((comment) =>
+        comment.id === commentId ? { ...comment, [field]: value } : comment
       ),
     }));
   };
 
-  // Eliminar un check correctamente usando su ID
-  const handleRemoveComment = (id: string) => {
+  // Función para eliminar un comentario
+  const handleDeleteCommentLocal = (commentId: string) => {
     setNoteValue((prev) => ({
       ...prev,
-      comments: prev.comments.filter((comment) => comment.id !== id),
+      comments: (prev.comments || []).filter((comment) => comment.id !== commentId),
     }));
+    // También eliminar del estado de edición
+    const newEditingComments = new Set(editingComments);
+    newEditingComments.delete(commentId);
+    setEditingComments(newEditingComments);
   };
 
   // Eliminar un miembro de noteValue
@@ -689,37 +699,124 @@ export default function KanbanColumnNotes({
                 <div className="add-tag-title">
                   <i className="material-icons">comment</i>
                   <strong>COMMENTS</strong>
+                  <MDBBtn
+                    className="mx-2"
+                    color="tertiary"
+                    rippleColor="light"
+                    onClick={handleAddCommentClick}
+                  >
+                    + Add a comment ...
+                  </MDBBtn>
                 </div>
-                {/* Input SIEMPRE ARRIBA */}
-                <MDBInput
-                  name="comment"
-                  label="Add comment..."
-                  type="text"
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  onKeyDown={handleAddComment}
-                />
-                {/* Lista de comentarios (debajo del input) */}
-                <ul className="comment-list">
-                  {noteValue.comments.map((comment) => (
-                    <li key={comment.id} className="comment-item">
-                      <MDBInput
-                        type="text"
-                        value={comment.text}
-                        onChange={(e) =>
-                          handleEditComment(comment.id, e.target.value)
-                        }
-                      />
-                      <MDBBtn
-                        color="danger"
-                        size="sm"
-                        onClick={() => handleRemoveComment(comment.id)}
-                      >
-                        ✕
-                      </MDBBtn>
-                    </li>
-                  ))}
-                </ul>
+                <MDBTable align="middle" small>
+                  <MDBTableHead light>
+                    <tr>
+                      <th scope="col">User</th>
+                      <th scope="col">Comment</th>
+                      <th scope="col">Actions</th>
+                    </tr>
+                  </MDBTableHead>
+                  <MDBTableBody>
+                    {(noteValue.comments || []).map((comment: any) => {
+                      const user = usersClient.find(
+                        (user: any) => user.user_id === comment.user_id
+                      );
+
+                      const isEditable =
+                        user && currentUser && user.user_id === currentUser;
+                      const isDeletable =
+                        user && currentUser && user.user_id === currentUser;
+
+                      return (
+                        <tr key={comment.id} className="check-item">
+                          <td>
+                            <div className="d-flex align-items-center">
+                              {user ? (
+                                <>
+                                  <img
+                                    key={comment.id}
+                                    src={user.image}
+                                    alt={user.full_name}
+                                    title={user.full_name}
+                                    style={{ width: "35px", height: "35px" }}
+                                    className="rounded-circle"
+                                  />
+                                  <div className="ms-3">
+                                    <p className="fw-bold mb-1">{user.full_name}</p>
+                                    <p className="text-muted mb-0">
+                                      {user.email}
+                                    </p>
+                                  </div>
+                                </>
+                              ) : null}
+                            </div>
+                          </td>
+
+                          <td>
+                            {isEditable && editingComments.has(comment.id) ? (
+                              <MDBInput
+                                type="text"
+                                value={comment.text}
+                                onChange={(e) =>
+                                  handleChangeCommentLocal(
+                                    comment.id,
+                                    "text",
+                                    e.target.value
+                                  )
+                                }
+                                onKeyPress={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    // Si el comentario tiene texto, guardarlo y ocultar el input
+                                    if (comment.text.trim() !== "") {
+                                      const newEditingComments = new Set(editingComments);
+                                      newEditingComments.delete(comment.id);
+                                      setEditingComments(newEditingComments);
+                                    } else {
+                                      // Si está vacío, eliminar el comentario
+                                      handleDeleteCommentLocal(comment.id);
+                                    }
+                                  }
+                                }}
+                                placeholder="Escribe un comentario y presiona Enter..."
+                                autoFocus
+                              />
+                            ) : (
+                              <p>{comment.text || ""}</p>
+                            )}
+                          </td>
+                          <td>
+                            {/* Mientras se está escribiendo, mostrar papelera para eliminar */}
+                            {editingComments.has(comment.id) && (
+                              <MDBBtn
+                                className="mx-2"
+                                color="tertiary"
+                                rippleColor="light"
+                                onClick={() => handleDeleteCommentLocal(comment.id)}
+                              >
+                                🗑️
+                              </MDBBtn>
+                            )}
+                            {/* Cuando está guardado, mostrar ojo para ver en modal */}
+                            {!editingComments.has(comment.id) && comment.text.trim() !== "" && (
+                              <MDBBtn
+                                className="mx-2"
+                                color="tertiary"
+                                rippleColor="light"
+                                onClick={() => {
+                                  setSelectedCommentView(comment);
+                                  setScrollableModalViewComment(true);
+                                }}
+                              >
+                                👁️
+                              </MDBBtn>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </MDBTableBody>
+                </MDBTable>
               </div>
               <div className="labelForm">
                 <div className="add-tag-title">
@@ -742,14 +839,27 @@ export default function KanbanColumnNotes({
             <MDBModalFooter>
               <MDBBtn
                 color="secondary"
-                onClick={() => setScrollableModal(!setScrollableModal)}
+                onClick={() => {
+                  setScrollableModal(!setScrollableModal);
+                  // Limpiar el estado de edición al cerrar el modal
+                  setEditingComments(new Set());
+                }}
               >
                 Close
               </MDBBtn>
               <MDBBtn
                 onClick={() => {
+                  // Filtrar comentarios vacíos antes de guardar
+                  const filteredNoteValue = {
+                    ...noteValue,
+                    comments: (noteValue.comments || []).filter(
+                      (comment: any) => comment.text && comment.text.trim() !== ""
+                    ),
+                  };
+                  handleAddNote(filteredNoteValue);
                   setScrollableModal(!setScrollableModal);
-                  handleAddNote(noteValue);
+                  // Limpiar el estado de edición al cerrar el modal
+                  setEditingComments(new Set());
                 }}
               >
                 Save changes
@@ -1379,6 +1489,104 @@ export default function KanbanColumnNotes({
               <MDBBtn
                 color="secondary"
                 onClick={() => setScrollableModalViewCheck(false)}
+              >
+                Close
+              </MDBBtn>
+            </MDBModalFooter>
+          </MDBModalContent>
+        </MDBModalDialog>
+      </MDBModal>
+      {/* VIEW COMMENT MODAL */}
+      <MDBModal
+        open={scrollableModalViewComment}
+        onClose={() => setScrollableModalViewComment(false)}
+        tabIndex="-1"
+      >
+        <MDBModalDialog scrollable>
+          <MDBModalContent>
+            <MDBModalHeader>
+              <MDBModalTitle>VIEW COMMENT</MDBModalTitle>
+              <MDBBtn
+                className="btn-close"
+                color="none"
+                onClick={() => setScrollableModalViewComment(false)}
+              ></MDBBtn>
+            </MDBModalHeader>
+            <MDBModalBody>
+              {selectedCommentView && (
+                <>
+                  <div className="labelForm">
+                    <div className="add-tag-title">
+                      <i className="material-icons">person</i>
+                      <strong>USER</strong>
+                    </div>
+                    {(() => {
+                      const user = usersClient.find(
+                        (u: any) => u.user_id === selectedCommentView.user_id
+                      );
+                      return user ? (
+                        <div className="d-flex align-items-center">
+                          <img
+                            src={user.image}
+                            alt={user.full_name}
+                            style={{ width: "50px", height: "50px" }}
+                            className="rounded-circle me-3"
+                          />
+                          <div>
+                            <p className="fw-bold mb-1">{user.full_name}</p>
+                            <p className="text-muted mb-0">{user.email}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <p>Usuario no encontrado</p>
+                      );
+                    })()}
+                  </div>
+                  <div className="labelForm">
+                    <div className="add-tag-title">
+                      <i className="material-icons">comment</i>
+                      <strong>COMMENT</strong>
+                    </div>
+                    <p style={{ fontSize: "16px", lineHeight: "1.6" }}>
+                      {selectedCommentView.text}
+                    </p>
+                  </div>
+                  {selectedCommentView.replies && selectedCommentView.replies.length > 0 && (
+                    <div className="labelForm">
+                      <div className="add-tag-title">
+                        <i className="material-icons">reply</i>
+                        <strong>REPLIES</strong>
+                      </div>
+                      {selectedCommentView.replies.map((reply: any, index: number) => {
+                        const replyUser = usersClient.find(
+                          (u: any) => u.user_id === reply.user_id
+                        );
+                        return (
+                          <div key={index} className="mb-3 p-3" style={{ backgroundColor: "#f5f5f5", borderRadius: "8px" }}>
+                            {replyUser ? (
+                              <div className="d-flex align-items-center mb-2">
+                                <img
+                                  src={replyUser.image}
+                                  alt={replyUser.full_name}
+                                  style={{ width: "35px", height: "35px" }}
+                                  className="rounded-circle me-2"
+                                />
+                                <span className="fw-bold">{replyUser.full_name}</span>
+                              </div>
+                            ) : null}
+                            <p className="mb-0">{reply.text}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+            </MDBModalBody>
+            <MDBModalFooter>
+              <MDBBtn
+                color="secondary"
+                onClick={() => setScrollableModalViewComment(false)}
               >
                 Close
               </MDBBtn>
