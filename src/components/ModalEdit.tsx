@@ -57,8 +57,12 @@ export default function ModalEdit({
   const [scrollableModal4, setScrollableModal4] = useState(false);
   const [scrollableModalViewCheck, setScrollableModalViewCheck] = useState(false);
   const [selectedCheckView, setSelectedCheckView] = useState<any>(null);
+  const [scrollableModalViewComment, setScrollableModalViewComment] = useState(false);
+  const [selectedCommentView, setSelectedCommentView] = useState<any>(null);
   // Estado local para el modal - evita guardar cambios hasta que el usuario haga click en "Save changes"
-  const [localEditNote, setLocalEditNote] = useState(editNote);
+  const [localEditNote, setLocalEditNote] = useState(editNote || { comments: [] });
+  // Estado para rastrear qué comentarios están siendo editados (mostrando el input)
+  const [editingComments, setEditingComments] = useState<Set<string>>(new Set());
 
   // Estado para el nuevo check completo a agregar
   const [newCheckFull, setNewCheckFull] = useState<any>({
@@ -72,7 +76,7 @@ export default function ModalEdit({
 
   // Función local para actualizar comentarios en localEditNote
   const handleChangeCommentLocal = (commentId: any, field: any, value: any) => {
-    const updatedComments = localEditNote.comments.map((comment: any) => {
+    const updatedComments = (localEditNote.comments || []).map((comment: any) => {
       if (comment.id === commentId) {
         return { ...comment, [field]: value };
       }
@@ -83,32 +87,41 @@ export default function ModalEdit({
 
   // Función local para añadir comentarios en localEditNote
   const handleAddCommentLocal = () => {
+    if (!currentUser || !currentUser.user_id) return;
+    const newCommentId = Date.now().toString();
     const newComment = {
-      id: Date.now().toString(),
+      id: newCommentId,
       user_id: currentUser.user_id,
       text: "",
       replies: [],
     };
     setLocalEditNote({
       ...localEditNote,
-      comments: [...localEditNote.comments, newComment],
+      comments: [...(localEditNote.comments || []), newComment],
     });
+    // Marcar el nuevo comentario como en edición para mostrar el input
+    setEditingComments(new Set([...Array.from(editingComments), newCommentId]));
   };
 
   // Función local para eliminar comentarios en localEditNote
   const handleDeleteCommentLocal = (commentId: any) => {
-    const updatedComments = localEditNote.comments.filter(
+    const updatedComments = (localEditNote.comments || []).filter(
       (comment: any) => comment.id !== commentId
     );
     setLocalEditNote({ ...localEditNote, comments: updatedComments });
+    // También eliminar del estado de edición
+    const newEditingComments = new Set(editingComments);
+    newEditingComments.delete(commentId);
+    setEditingComments(newEditingComments);
   };
 
   // Sincronizar el estado local cuando editNote cambia (cuando se abre el modal)
   useEffect(() => {
-    setLocalEditNote(editNote);
-  }, [editNote, scrollableModal1]);
-  useEffect(() => {
-    setLocalEditNote(editNote);
+    if (editNote) {
+      setLocalEditNote(editNote);
+      // Limpiar el estado de edición cuando se abre el modal
+      setEditingComments(new Set());
+    }
   }, [editNote, scrollableModal1]);
   return (
     <>
@@ -542,15 +555,15 @@ export default function ModalEdit({
                     </tr>
                   </MDBTableHead>
                   <MDBTableBody>
-                    {localEditNote.comments.map((comment: any) => {
+                    {(localEditNote.comments || []).map((comment: any) => {
                       const user = usersClient.find(
                         (user: any) => user.user_id === comment.user_id
                       );
 
                       const isEditable =
-                        user && user.user_id === currentUser.user_id;
+                        user && currentUser && user.user_id === currentUser.user_id;
                       const isDeletable =
-                        user && user.user_id === currentUser.user_id;
+                        user && currentUser && user.user_id === currentUser.user_id;
 
                       return (
                         <tr key={comment.id} className="check-item">
@@ -579,7 +592,7 @@ export default function ModalEdit({
                           </td>
 
                           <td>
-                            {isEditable && comment.text === "" ? (
+                            {isEditable && editingComments.has(comment.id) ? (
                               <MDBInput
                                 type="text"
                                 value={comment.text}
@@ -591,10 +604,17 @@ export default function ModalEdit({
                                   )
                                 }
                                 onKeyPress={(e) => {
-                                  if (e.key === "Enter" && comment.text.trim() !== "") {
+                                  if (e.key === "Enter") {
                                     e.preventDefault();
-                                    // El comentario ya se guarda automáticamente con handleChangeCommentLocal
-                                    // Al tener texto, el input se ocultará automáticamente
+                                    // Si el comentario tiene texto, guardarlo y ocultar el input
+                                    if (comment.text.trim() !== "") {
+                                      const newEditingComments = new Set(editingComments);
+                                      newEditingComments.delete(comment.id);
+                                      setEditingComments(newEditingComments);
+                                    } else {
+                                      // Si está vacío, eliminar el comentario
+                                      handleDeleteCommentLocal(comment.id);
+                                    }
                                   }
                                 }}
                                 placeholder="Escribe un comentario y presiona Enter..."
@@ -605,8 +625,8 @@ export default function ModalEdit({
                             )}
                           </td>
                           <td>
-                            {/* El botón de eliminación solo aparece si el comentario es del usuario actual */}
-                            {isDeletable && (
+                            {/* Mientras se está escribiendo, mostrar papelera para eliminar */}
+                            {editingComments.has(comment.id) && (
                               <MDBBtn
                                 className="mx-2"
                                 color="tertiary"
@@ -614,6 +634,20 @@ export default function ModalEdit({
                                 onClick={() => handleDeleteCommentLocal(comment.id)}
                               >
                                 🗑️
+                              </MDBBtn>
+                            )}
+                            {/* Cuando está guardado, mostrar ojo para ver en modal */}
+                            {!editingComments.has(comment.id) && comment.text.trim() !== "" && (
+                              <MDBBtn
+                                className="mx-2"
+                                color="tertiary"
+                                rippleColor="light"
+                                onClick={() => {
+                                  setSelectedCommentView(comment);
+                                  setScrollableModalViewComment(true);
+                                }}
+                              >
+                                👁️
                               </MDBBtn>
                             )}
                           </td>
@@ -682,8 +716,8 @@ export default function ModalEdit({
                   // Filtrar comentarios vacíos antes de guardar
                   const filteredNote = {
                     ...localEditNote,
-                    comments: localEditNote.comments.filter(
-                      (comment: any) => comment.text.trim() !== ""
+                    comments: (localEditNote.comments || []).filter(
+                      (comment: any) => comment.text && comment.text.trim() !== ""
                     ),
                   };
                   // Guardar los cambios locales al estado padre
@@ -1069,6 +1103,104 @@ export default function ModalEdit({
               <MDBBtn
                 color="secondary"
                 onClick={() => setScrollableModalViewCheck(false)}
+              >
+                Close
+              </MDBBtn>
+            </MDBModalFooter>
+          </MDBModalContent>
+        </MDBModalDialog>
+      </MDBModal>
+      {/* VIEW COMMENT MODAL */}
+      <MDBModal
+        open={scrollableModalViewComment}
+        onClose={() => setScrollableModalViewComment(false)}
+        tabIndex="-1"
+      >
+        <MDBModalDialog scrollable>
+          <MDBModalContent>
+            <MDBModalHeader>
+              <MDBModalTitle>VIEW COMMENT</MDBModalTitle>
+              <MDBBtn
+                className="btn-close"
+                color="none"
+                onClick={() => setScrollableModalViewComment(false)}
+              ></MDBBtn>
+            </MDBModalHeader>
+            <MDBModalBody>
+              {selectedCommentView && (
+                <>
+                  <div className="labelForm">
+                    <div className="add-tag-title">
+                      <i className="material-icons">person</i>
+                      <strong>USER</strong>
+                    </div>
+                    {(() => {
+                      const user = usersClient.find(
+                        (u: any) => u.user_id === selectedCommentView.user_id
+                      );
+                      return user ? (
+                        <div className="d-flex align-items-center">
+                          <img
+                            src={user.image}
+                            alt={user.full_name}
+                            style={{ width: "50px", height: "50px" }}
+                            className="rounded-circle me-3"
+                          />
+                          <div>
+                            <p className="fw-bold mb-1">{user.full_name}</p>
+                            <p className="text-muted mb-0">{user.email}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <p>Usuario no encontrado</p>
+                      );
+                    })()}
+                  </div>
+                  <div className="labelForm">
+                    <div className="add-tag-title">
+                      <i className="material-icons">comment</i>
+                      <strong>COMMENT</strong>
+                    </div>
+                    <p style={{ fontSize: "16px", lineHeight: "1.6" }}>
+                      {selectedCommentView.text}
+                    </p>
+                  </div>
+                  {selectedCommentView.replies && selectedCommentView.replies.length > 0 && (
+                    <div className="labelForm">
+                      <div className="add-tag-title">
+                        <i className="material-icons">reply</i>
+                        <strong>REPLIES</strong>
+                      </div>
+                      {selectedCommentView.replies.map((reply: any, index: number) => {
+                        const replyUser = usersClient.find(
+                          (u: any) => u.user_id === reply.user_id
+                        );
+                        return (
+                          <div key={index} className="mb-3 p-3" style={{ backgroundColor: "#f5f5f5", borderRadius: "8px" }}>
+                            {replyUser ? (
+                              <div className="d-flex align-items-center mb-2">
+                                <img
+                                  src={replyUser.image}
+                                  alt={replyUser.full_name}
+                                  style={{ width: "35px", height: "35px" }}
+                                  className="rounded-circle me-2"
+                                />
+                                <span className="fw-bold">{replyUser.full_name}</span>
+                              </div>
+                            ) : null}
+                            <p className="mb-0">{reply.text}</p>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+            </MDBModalBody>
+            <MDBModalFooter>
+              <MDBBtn
+                color="secondary"
+                onClick={() => setScrollableModalViewComment(false)}
               >
                 Close
               </MDBBtn>
