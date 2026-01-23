@@ -70,6 +70,39 @@ export default function ModalEdit({
     finished: false,
   });
 
+  // Función local para actualizar comentarios en localEditNote
+  const handleChangeCommentLocal = (commentId: any, field: any, value: any) => {
+    const updatedComments = localEditNote.comments.map((comment: any) => {
+      if (comment.id === commentId) {
+        return { ...comment, [field]: value };
+      }
+      return comment;
+    });
+    setLocalEditNote({ ...localEditNote, comments: updatedComments });
+  };
+
+  // Función local para añadir comentarios en localEditNote
+  const handleAddCommentLocal = () => {
+    const newComment = {
+      id: Date.now().toString(),
+      user_id: currentUser.user_id,
+      text: "",
+      replies: [],
+    };
+    setLocalEditNote({
+      ...localEditNote,
+      comments: [...localEditNote.comments, newComment],
+    });
+  };
+
+  // Función local para eliminar comentarios en localEditNote
+  const handleDeleteCommentLocal = (commentId: any) => {
+    const updatedComments = localEditNote.comments.filter(
+      (comment: any) => comment.id !== commentId
+    );
+    setLocalEditNote({ ...localEditNote, comments: updatedComments });
+  };
+
   // Sincronizar el estado local cuando editNote cambia (cuando se abre el modal)
   useEffect(() => {
     setLocalEditNote(editNote);
@@ -495,7 +528,7 @@ export default function ModalEdit({
                     className="mx-2"
                     color="tertiary"
                     rippleColor="light"
-                    onClick={handleAddComment}
+                    onClick={handleAddCommentLocal}
                   >
                     + Add a comment ...
                   </MDBBtn>
@@ -546,21 +579,29 @@ export default function ModalEdit({
                           </td>
 
                           <td>
-                            {isEditable ? (
+                            {isEditable && comment.text === "" ? (
                               <MDBInput
                                 type="text"
                                 value={comment.text}
                                 onChange={(e) =>
-                                  handleChangeComment(
+                                  handleChangeCommentLocal(
                                     comment.id,
                                     "text",
                                     e.target.value
                                   )
                                 }
-                                placeholder="Edit Comment"
+                                onKeyPress={(e) => {
+                                  if (e.key === "Enter" && comment.text.trim() !== "") {
+                                    e.preventDefault();
+                                    // El comentario ya se guarda automáticamente con handleChangeCommentLocal
+                                    // Al tener texto, el input se ocultará automáticamente
+                                  }
+                                }}
+                                placeholder="Escribe un comentario y presiona Enter..."
+                                autoFocus
                               />
                             ) : (
-                              <p>{comment.text}</p>
+                              <p>{comment.text || ""}</p>
                             )}
                           </td>
                           <td>
@@ -570,7 +611,7 @@ export default function ModalEdit({
                                 className="mx-2"
                                 color="tertiary"
                                 rippleColor="light"
-                                onClick={() => handleDeleteComment(comment.id)}
+                                onClick={() => handleDeleteCommentLocal(comment.id)}
                               >
                                 🗑️
                               </MDBBtn>
@@ -638,10 +679,15 @@ export default function ModalEdit({
               </MDBBtn>
               <MDBBtn
                 onClick={() => {
+                  // Filtrar comentarios vacíos antes de guardar
+                  const filteredNote = {
+                    ...localEditNote,
+                    comments: localEditNote.comments.filter(
+                      (comment: any) => comment.text.trim() !== ""
+                    ),
+                  };
                   // Guardar los cambios locales al estado padre
-                  // setEditNote ya guarda los cambios a través de handleUpdateColumn
-                  // No es necesario llamar a handleSaveNote() porque sería redundante
-                  setEditNote(localEditNote);
+                  setEditNote(filteredNote);
                   setScrollableModal1(false);
                 }}
               >
