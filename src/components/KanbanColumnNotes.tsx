@@ -659,22 +659,26 @@ export default function KanbanColumnNotes({
                           >
                             👁️
                           </MDBBtn>
-                          <MDBBtn
-                            className="mx-2"
-                            color="tertiary"
-                            rippleColor="light"
-                            onClick={() => handleEditCheckModal(check)}
-                          >
-                            ✏️
-                          </MDBBtn>
-                          <MDBBtn
-                            className="mx-2"
-                            color="tertiary"
-                            rippleColor="light"
-                            onClick={() => handleRemoveCheck(check.id)}
-                          >
-                            🗑️
-                          </MDBBtn>
+                          {!check.finished && (
+                            <>
+                              <MDBBtn
+                                className="mx-2"
+                                color="tertiary"
+                                rippleColor="light"
+                                onClick={() => handleEditCheckModal(check)}
+                              >
+                                ✏️
+                              </MDBBtn>
+                              <MDBBtn
+                                className="mx-2"
+                                color="tertiary"
+                                rippleColor="light"
+                                onClick={() => handleRemoveCheck(check.id)}
+                              >
+                                🗑️
+                              </MDBBtn>
+                            </>
+                          )}
                         </td>
                       </tr>
                     ))}

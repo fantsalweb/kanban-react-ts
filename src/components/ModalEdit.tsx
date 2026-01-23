@@ -459,24 +459,28 @@ export default function ModalEdit({
                           >
                             👁️
                           </MDBBtn>
-                          <MDBBtn
-                            className="mx-2"
-                            color="tertiary"
-                            rippleColor="light"
-                            onClick={() => {
-                              handleEdit(check);
-                            }}
-                          >
-                            ✏️
-                          </MDBBtn>
-                          <MDBBtn
-                            className="mx-2"
-                            color="tertiary"
-                            rippleColor="light"
-                            onClick={() => handleDeleteChecklist(check.id)}
-                          >
-                            🗑️
-                          </MDBBtn>
+                          {!check.finished && (
+                            <>
+                              <MDBBtn
+                                className="mx-2"
+                                color="tertiary"
+                                rippleColor="light"
+                                onClick={() => {
+                                  handleEdit(check);
+                                }}
+                              >
+                                ✏️
+                              </MDBBtn>
+                              <MDBBtn
+                                className="mx-2"
+                                color="tertiary"
+                                rippleColor="light"
+                                onClick={() => handleDeleteChecklist(check.id)}
+                              >
+                                🗑️
+                              </MDBBtn>
+                            </>
+                          )}
                         </td>
                       </tr>
                     ))}

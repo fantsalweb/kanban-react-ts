@@ -133,6 +133,7 @@ export default function KanbanColumnNote({
   const [scrollableModal, setScrollableModal] = useState(false);
   const [scrollableModal1, setScrollableModal1] = useState(false);
   const [scrollableModal2, setScrollableModal2] = useState(false);
+  const [newTagCheckEdit, setNewTagCheckEdit] = useState(""); // Estado para agregar tags en EDIT CHECK modal
 
   const [selectedRow, setSelectedRow] = useState<ChecklistItem | null>(null); // Datos de la fila seleccionada
 
@@ -245,6 +246,68 @@ export default function KanbanColumnNote({
       ...prev,
       checklist: updatedChecklist,
     }));
+  };
+
+  // ===== FUNCIONES LOCALES PARA EDIT CHECK MODAL =====
+
+  // Agregar tag al check que se está editando
+  const handleAddTagCheckLocal = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && newTagCheckEdit.trim() !== "" && selectedRow) {
+      const updatedTags = [...(selectedRow.tags || []), newTagCheckEdit.trim()];
+      setSelectedRow({ ...selectedRow, tags: updatedTags });
+      setNewTagCheckEdit("");
+      e.preventDefault();
+    }
+  };
+
+  // Eliminar tag del check que se está editando
+  const handleDeleteTagCheckLocal = (index: number) => {
+    if (selectedRow) {
+      const updatedTags = selectedRow.tags.filter((_: string, i: number) => i !== index);
+      setSelectedRow({ ...selectedRow, tags: updatedTags });
+    }
+  };
+
+  // Agregar miembro al check que se está editando
+  const handleAddMemberCheckLocal = (userId: string) => {
+    if (!selectedRow) return;
+    
+    const exists = selectedRow.members?.some(
+      (m: any) => (typeof m === "object" ? m.user_id : m) === userId
+    );
+    if (!exists) {
+      setSelectedRow({
+        ...selectedRow,
+        members: [...(selectedRow.members || []), { user_id: userId }],
+      });
+    }
+  };
+
+  // Eliminar miembro del check que se está editando
+  const handleDeleteMemberCheckLocal = (userId: string) => {
+    if (!selectedRow || !selectedRow.members) return;
+    const updatedMembers = selectedRow.members.filter(
+      (m: any) => (typeof m === "object" ? m.user_id : m) !== userId
+    );
+    setSelectedRow({ ...selectedRow, members: updatedMembers });
+  };
+
+  // Guardar cambios del check editado
+  const handleSaveCheckEdit = () => {
+    if (!selectedRow || !editNote) return;
+
+    const updatedChecklist = editNote.checklist.map((check) =>
+      check.id === selectedRow.id ? selectedRow : check
+    );
+
+    setEditNote((prev) => ({
+      ...prev,
+      checklist: updatedChecklist,
+    }));
+
+    setScrollableModal2(false);
+    setSelectedRow(null);
+    setNewTagCheckEdit("");
   };
 
   // ➕ Agregar un nuevo checklist item
@@ -590,16 +653,12 @@ export default function KanbanColumnNote({
                       name="check"
                       label="Check..."
                       type="text"
-                      value={
-                        editNote?.checklist.find((c) => c.id === selectedRow.id)
-                          ?.title || ""
-                      }
+                      value={selectedRow?.title || ""}
                       onChange={(e) => {
-                        handleChangeChecklist(
-                          selectedRow.id,
-                          "title",
-                          e.target.value
-                        );
+                        setSelectedRow({
+                          ...selectedRow,
+                          title: e.target.value,
+                        });
                       }}
                     />
                   </div>
@@ -614,15 +673,15 @@ export default function KanbanColumnNote({
                           key={level}
                           className="grid"
                           onClick={() =>
-                            setEditNote((prev) => ({
-                              ...prev,
+                            setSelectedRow({
+                              ...selectedRow,
                               priority: level,
-                            }))
+                            })
                           }
                           style={{
                             cursor: "pointer",
                             fontWeight:
-                              selectedRow.priority === level
+                              selectedRow?.priority === level
                                 ? "bold"
                                 : "normal",
                           }}
@@ -646,14 +705,14 @@ export default function KanbanColumnNote({
                       <strong>TAGS</strong>
                     </div>
                     <ul className="tag-content">
-                      {selectedRow.tags.length > 0 &&
-                        selectedRow.tags.map((tag, index) => (
+                      {selectedRow?.tags?.length > 0 &&
+                        selectedRow.tags.map((tag: string, index: number) => (
                           <li key={index}>
                             <MDBBadge
                               pill
                               light
                               className="tag-badge"
-                              onClick={() => handleDeleteTagCheck(index)} // Hacer clic para eliminar
+                              onClick={() => handleDeleteTagCheckLocal(index)}
                               style={{ cursor: "pointer" }}
                             >
                               {tag} ✕
@@ -665,9 +724,9 @@ export default function KanbanColumnNote({
                           name="tag"
                           label="Tag..."
                           type="text"
-                          value={newTag} // Enlazado al estado
-                          onChange={(e) => setNewTag(e.target.value)} // Guardar valor en estado
-                          onKeyDown={handleAddTagCheck} // Agregar al presionar Enter
+                          value={newTagCheckEdit}
+                          onChange={(e) => setNewTagCheckEdit(e.target.value)}
+                          onKeyDown={handleAddTagCheckLocal}
                         />
                       </li>
                     </ul>
@@ -686,21 +745,24 @@ export default function KanbanColumnNote({
                         </MDBDropdownToggle>
                         <MDBDropdownMenu>
                           {usersClient
-                          .filter(
-                            (user: any) =>
-                              !selectedRow?.members?.some(
-                                (member: any) => member.user_id === user.user_id
-                              )
-                          )
-                          .map((user: any) => (
-                            <MDBDropdownItem
-                              key={user.user_id}
-                              link
-                              onClick={() => handleAddMember(user.user_id)}
-                            >
-                              {user.full_name}
-                            </MDBDropdownItem>
-                          ))}
+                            .filter(
+                              (user: any) =>
+                                !selectedRow?.members?.some(
+                                  (member: any) =>
+                                    (typeof member === "object"
+                                      ? member.user_id
+                                      : member) === user.user_id
+                                )
+                            )
+                            .map((user: any) => (
+                              <MDBDropdownItem
+                                key={user.user_id}
+                                link
+                                onClick={() => handleAddMemberCheckLocal(user.user_id)}
+                              >
+                                {user.full_name}
+                              </MDBDropdownItem>
+                            ))}
                         </MDBDropdownMenu>
                       </MDBDropdown>
                     </div>
@@ -716,52 +778,54 @@ export default function KanbanColumnNote({
                       </MDBTableHead>
                       <MDBTableBody>
                         {selectedRow?.members?.map((member: any) => {
-                        const userId =
-                          typeof member === "object" ? member.user_id : member;
-                        const user = usersClient.find((user: any) => user.user_id === userId);
+                          const userId =
+                            typeof member === "object" ? member.user_id : member;
+                          const user = usersClient.find(
+                            (user: any) => user.user_id === userId
+                          );
 
-                        return user ? (
-                          <tr key={user.user_id}>
-                            <td>
-                              <img
-                                src={user.image}
-                                alt=""
-                                style={{ width: "35px", height: "35px" }}
-                                className="rounded-circle"
-                              />
-                            </td>
-                            <td>
-                              <span className="fw-bold">{user.full_name}</span>
-                            </td>
-                            <td>
-                              <span>{user.email}</span>
-                            </td>
-                            <td>
-                              {user.skills.map(({skill, index}: {skill: string, index: number}) => (
-                                <MDBBadge
-                                  key={index}
-                                  pill
-                                  light
-                                  className="tag-badge"
-                                  style={{ cursor: "pointer" }}
+                          return user ? (
+                            <tr key={user.user_id}>
+                              <td>
+                                <img
+                                  src={user.image}
+                                  alt=""
+                                  style={{ width: "35px", height: "35px" }}
+                                  className="rounded-circle"
+                                />
+                              </td>
+                              <td>
+                                <span className="fw-bold">{user.full_name}</span>
+                              </td>
+                              <td>
+                                <span>{user.email}</span>
+                              </td>
+                              <td>
+                                {user.skills.map((skill: string, index: number) => (
+                                  <MDBBadge
+                                    key={index}
+                                    pill
+                                    light
+                                    className="tag-badge"
+                                    style={{ cursor: "pointer" }}
+                                  >
+                                    {skill}
+                                  </MDBBadge>
+                                ))}
+                              </td>
+                              <td>
+                                <MDBBtn
+                                  className="mx-2"
+                                  color="tertiary"
+                                  rippleColor="light"
+                                  onClick={() => handleDeleteMemberCheckLocal(user.user_id)}
                                 >
-                                  {skill}
-                                </MDBBadge>
-                              ))}
-                            </td>
-                            <td>
-                              <MDBBtn
-                                className="mx-2"
-                                color="tertiary"
-                                rippleColor="light"
-                                onClick={() => handleDeleteMember(user.user_id)}
-                              >
-                                🗑️
-                              </MDBBtn>
-                            </td>
-                          </tr>
-                        ) : null;
-                      })}
+                                  🗑️
+                                </MDBBtn>
+                              </td>
+                            </tr>
+                          ) : null;
+                        })}
                       </MDBTableBody>
                     </MDBTable>
                   </div>
@@ -775,7 +839,9 @@ export default function KanbanColumnNote({
               >
                 Close
               </MDBBtn>
-              <MDBBtn>Save changes</MDBBtn>
+              <MDBBtn onClick={handleSaveCheckEdit}>
+                Save changes
+              </MDBBtn>
             </MDBModalFooter>
           </MDBModalContent>
         </MDBModalDialog>
