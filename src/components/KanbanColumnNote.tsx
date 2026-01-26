@@ -72,6 +72,7 @@ export default function KanbanColumnNote({
   usersClient,
   handleAddMember,
   handleDeleteMember,
+  projectMembers,
 }: any) {
   const newNote: Note = {
     id: "",
@@ -271,7 +272,7 @@ export default function KanbanColumnNote({
   // Agregar miembro al check que se está editando
   const handleAddMemberCheckLocal = (userId: string) => {
     if (!selectedRow) return;
-    
+
     const exists = selectedRow.members?.some(
       (m: any) => (typeof m === "object" ? m.user_id : m) === userId
     );
@@ -438,7 +439,7 @@ export default function KanbanColumnNote({
     const userExists = editNote.members.some(
       (member) => member.user_id === userId
     );
-    
+
     if (!userExists) {
       setEditNote((prevNote) => ({
         ...prevNote,
@@ -471,12 +472,12 @@ export default function KanbanColumnNote({
   const formatedDate = (formatDate: any) => {
     // Si no hay fecha o está vacía, devolver "-"
     if (!formatDate) return "-";
-    
+
     const date = new Date(formatDate);
-    
+
     // Validar si es una fecha válida
     if (isNaN(date.getTime())) return "-";
-    
+
     const formatter = new Intl.DateTimeFormat("en-US", {
       month: "short",
       day: "numeric",
@@ -622,6 +623,7 @@ export default function KanbanColumnNote({
         handleDeleteTagCheck={handleDeleteTagCheck}
         handleChangeComment={handleChangeComment}
         handleSaveNote={handleSaveNote}
+        projectMembers={projectMembers}
       />
       {/* EDIT CHECK */}
       <MDBModal
@@ -744,7 +746,7 @@ export default function KanbanColumnNote({
                           Add Member
                         </MDBDropdownToggle>
                         <MDBDropdownMenu>
-                          {usersClient
+                          {projectMembers
                             .filter(
                               (user: any) =>
                                 !selectedRow?.members?.some(

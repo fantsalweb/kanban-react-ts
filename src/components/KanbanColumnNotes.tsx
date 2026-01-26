@@ -52,6 +52,7 @@ interface KanbanColumnNotesProps {
   handleAddMember: (userId: string, noteId?: string) => void;
   handleDeleteMember: (userId: string, noteId: string) => void;
   selectedProject: any;
+  projectMembers: any[];
 }
 
 interface NoteValue {
@@ -76,6 +77,7 @@ export default function KanbanColumnNotes({
   handleAddMember,
   handleDeleteMember,
   selectedProject,
+  projectMembers,
 }: KanbanColumnNotesProps) {
   const [scrollableModal, setScrollableModal] = useState(false);
   const [toggleTwoModal, setToggleTwoModal] = useState(false);
@@ -312,6 +314,7 @@ export default function KanbanColumnNotes({
           usersClient={usersClient}
           handleAddMember={handleAddMember}
           handleDeleteMember={handleDeleteMember}
+          projectMembers={projectMembers}
         />
       ))}
       <MDBBtn
@@ -396,7 +399,7 @@ export default function KanbanColumnNotes({
                       Add Member
                     </MDBDropdownToggle>
                     <MDBDropdownMenu>
-                      {usersClient
+                      {projectMembers
                         .filter(
                           (user: any) =>
                             !noteValue.members.some(
@@ -525,17 +528,16 @@ export default function KanbanColumnNotes({
                         type="date"
                         value={noteValue.dates.deadline || ""}
                         onChange={
-                          (e) =>
-                            {
-                              console.log(e.target.value)
-                              setNoteValue((prev: any) => ({
-                                ...prev,
-                                dates: {
-                                  ...prev.dates,
-                                  deadline: e.target.value, // Actualiza directamente la propiedad 'deadline' en 'dates'
-                                },
-                              }))
-                            }
+                          (e) => {
+                            console.log(e.target.value)
+                            setNoteValue((prev: any) => ({
+                              ...prev,
+                              dates: {
+                                ...prev.dates,
+                                deadline: e.target.value, // Actualiza directamente la propiedad 'deadline' en 'dates'
+                              },
+                            }))
+                          }
                         }
                       />
                     </span>

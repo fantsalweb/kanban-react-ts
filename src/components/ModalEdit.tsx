@@ -51,7 +51,8 @@ export default function ModalEdit({
   handleDeleteComment,
   handleDeleteTagCheck,
   handleChangeComment,
-  handleSaveNote
+  handleSaveNote,
+  projectMembers
 }: any) {
   const [scrollableModal3, setScrollableModal3] = useState(false);
   const [scrollableModal4, setScrollableModal4] = useState(false);
@@ -157,7 +158,7 @@ export default function ModalEdit({
                   type="text"
                   value={localEditNote.image}
                   onChange={(e) => {
-                    setLocalEditNote({...localEditNote, image: e.target.value});
+                    setLocalEditNote({ ...localEditNote, image: e.target.value });
                   }}
                 />
               </div>
@@ -172,7 +173,7 @@ export default function ModalEdit({
                   type="text"
                   value={localEditNote.title}
                   onChange={(e) => {
-                    setLocalEditNote({...localEditNote, title: e.target.value});
+                    setLocalEditNote({ ...localEditNote, title: e.target.value });
                   }}
                 />
               </div>
@@ -191,7 +192,7 @@ export default function ModalEdit({
                           className="tag-badge"
                           onClick={() => {
                             const updatedTags = localEditNote.tags.filter((_: string, i: number) => i !== index);
-                            setLocalEditNote({...localEditNote, tags: updatedTags});
+                            setLocalEditNote({ ...localEditNote, tags: updatedTags });
                           }}
                           style={{ cursor: "pointer" }}
                         >
@@ -209,7 +210,7 @@ export default function ModalEdit({
                       onKeyPress={(e) => {
                         if (e.key === "Enter" && newTag.trim() !== "") {
                           e.preventDefault();
-                          setLocalEditNote({...localEditNote, tags: [...localEditNote.tags, newTag.trim()]});
+                          setLocalEditNote({ ...localEditNote, tags: [...localEditNote.tags, newTag.trim()] });
                           setNewTag("");
                         }
                       }}
@@ -230,7 +231,7 @@ export default function ModalEdit({
                       Add Member
                     </MDBDropdownToggle>
                     <MDBDropdownMenu>
-                      {usersClient
+                      {projectMembers
                         .filter(
                           (user: any) =>
                             !localEditNote.members.some(
@@ -244,7 +245,7 @@ export default function ModalEdit({
                             onClick={() => {
                               setLocalEditNote({
                                 ...localEditNote,
-                                members: [...localEditNote.members, {user_id: user.user_id}]
+                                members: [...localEditNote.members, { user_id: user.user_id }]
                               });
                             }}
                           >
@@ -310,7 +311,7 @@ export default function ModalEdit({
                                 const updatedMembers = localEditNote.members.filter(
                                   (m: any) => m.user_id !== user.user_id
                                 );
-                                setLocalEditNote({...localEditNote, members: updatedMembers});
+                                setLocalEditNote({ ...localEditNote, members: updatedMembers });
                               }}
                             >
                               🗑️
@@ -338,7 +339,7 @@ export default function ModalEdit({
                           localEditNote.priority === level ? "bold" : "normal",
                       }}
                       onClick={() => {
-                        setLocalEditNote({...localEditNote, priority: level});
+                        setLocalEditNote({ ...localEditNote, priority: level });
                       }}
                     >
                       {level === "low" && "Baja:"}
@@ -383,7 +384,7 @@ export default function ModalEdit({
                   rows={4}
                   value={localEditNote.description}
                   onChange={(e) => {
-                    setLocalEditNote({...localEditNote, description: e.target.value});
+                    setLocalEditNote({ ...localEditNote, description: e.target.value });
                   }}
                 />
               </div>
@@ -760,7 +761,7 @@ export default function ModalEdit({
                   label="Check..."
                   type="text"
                   value={newCheckFull.title}
-                  onChange={(e) => setNewCheckFull({...newCheckFull, title: e.target.value})}
+                  onChange={(e) => setNewCheckFull({ ...newCheckFull, title: e.target.value })}
                 />
               </div>
               <div className="labelForm">
@@ -809,7 +810,7 @@ export default function ModalEdit({
                             className="tag-badge"
                             onClick={() => {
                               const updatedTags = newCheckFull.tags.filter((_: string, i: number) => i !== index);
-                              setNewCheckFull({...newCheckFull, tags: updatedTags});
+                              setNewCheckFull({ ...newCheckFull, tags: updatedTags });
                             }}
                             style={{ cursor: "pointer" }}
                           >
@@ -828,7 +829,7 @@ export default function ModalEdit({
                       onKeyPress={(e) => {
                         if (e.key === "Enter" && newTag.trim() !== "") {
                           e.preventDefault();
-                          setNewCheckFull({...newCheckFull, tags: [...newCheckFull.tags, newTag.trim()]});
+                          setNewCheckFull({ ...newCheckFull, tags: [...newCheckFull.tags, newTag.trim()] });
                           setNewTag("");
                         }
                       }}
@@ -848,7 +849,7 @@ export default function ModalEdit({
                       Add Member
                     </MDBDropdownToggle>
                     <MDBDropdownMenu>
-                      {usersClient
+                      {projectMembers
                         .filter(
                           (user: any) =>
                             !newCheckFull.members.some(
@@ -862,7 +863,7 @@ export default function ModalEdit({
                             onClick={() => {
                               setNewCheckFull({
                                 ...newCheckFull,
-                                members: [...newCheckFull.members, {user_id: user.user_id}]
+                                members: [...newCheckFull.members, { user_id: user.user_id }]
                               });
                             }}
                           >
@@ -928,7 +929,7 @@ export default function ModalEdit({
                                 const updatedMembers = newCheckFull.members.filter(
                                   (m: any) => m.user_id !== user.user_id
                                 );
-                                setNewCheckFull({...newCheckFull, members: updatedMembers});
+                                setNewCheckFull({ ...newCheckFull, members: updatedMembers });
                               }}
                             >
                               🗑️

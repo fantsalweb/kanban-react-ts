@@ -19,6 +19,7 @@ export default function KanbanColumn({
   selectedProject,
   handleUpdateProject,
   handleUpdateColumn,
+  projectMembers,
 }: any) {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -143,7 +144,7 @@ export default function KanbanColumn({
     });
     handleUpdateProject({ ...selectedProject, columns: updatedColumns });
   };
-  
+
   return (
     <article className={`column ${column.color}`}>
       <header>
@@ -175,6 +176,7 @@ export default function KanbanColumn({
         handleAddMember={handleAddMember}
         handleDeleteMember={handleDeleteMember}
         selectedProject={selectedProject}
+        projectMembers={projectMembers}
       />
       {/* Modal para editar nombre */}
       <MDBModal

@@ -78,6 +78,30 @@ const initialColumns = [
       {
         id: "1",
         name: "KANBAN WEB",
+        members: [
+          {
+            user_id: "1",
+            first_name: "Juan",
+            last_name: "Pérez",
+            full_name: "Juan Pérez",
+            image: "https://mdbootstrap.com/img/new/avatars/1.jpg",
+            email: "juan.perez@techinnovations.com",
+            role: "Administrador",
+            state: "activated",
+            skills: ["SQL", "Developer"],
+          },
+          {
+            user_id: "2",
+            first_name: "John",
+            last_name: "Doe",
+            full_name: "John Doe",
+            image: "https://mdbootstrap.com/img/new/avatars/2.jpg",
+            email: "tonny@techinnovations.com",
+            role: "User",
+            state: "activated",
+            skills: ["UI", "Design"],
+          }
+        ],
         columns: [
           {
             id: "1",
@@ -413,6 +437,30 @@ const initialColumns = [
       {
         id: "2",
         name: "KANBAN MOVIL",
+        members: [
+          {
+            user_id: "3",
+            first_name: "Marta",
+            last_name: "Sánchez",
+            full_name: "Marta Sánchez",
+            image: "https://mdbootstrap.com/img/new/avatars/3.jpg",
+            email: "jose@techinnovations.com",
+            role: "User",
+            state: "activated",
+            skills: ["UI", "Design"],
+          },
+          {
+            user_id: "4",
+            first_name: "India",
+            last_name: "Martínez",
+            full_name: "India Martínez",
+            image: "https://mdbootstrap.com/img/new/avatars/8.jpg",
+            email: "jose@techinnovations.com",
+            role: "User",
+            state: "activated",
+            skills: ["UI", "Design"],
+          },
+        ],
         columns: [
           {
             id: "1",

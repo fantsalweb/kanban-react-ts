@@ -18,6 +18,7 @@ export default function KanbanColumns({
   handleAddProject,
   handleUpdateProject,
   handleUpdateColumn,
+  projectMembers,
 }: any) {
   const [scrollableModal, setScrollableModal] = useState(false);
   const [newColumnName, setNewColumnName] = useState("");
@@ -37,6 +38,7 @@ export default function KanbanColumns({
             selectedProject={selectedProject}
             handleUpdateProject={handleUpdateProject}
             handleUpdateColumn={handleUpdateColumn}
+            projectMembers={projectMembers}
           />
         ))}
         <MDBBtn outline onClick={() => setScrollableModal(true)} size="sm">
